@@ -2,8 +2,8 @@
 echo "Compiling all Java files..."
 javac src/*.java
 if [ $? -eq 0 ]; then
-    echo "✓ Compilation successful"
+    echo "Compilation successful"
 else
-    echo "❌ Compilation failed"
+    echo "Compilation failed"
     exit 1
 fi
