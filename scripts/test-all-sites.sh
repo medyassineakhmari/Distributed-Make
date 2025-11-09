@@ -29,7 +29,7 @@ for SITE in "${SITES[@]}"; do
     JOB_ID=$(ssh $SITE_FULL "cd ~/pingpong && oarsub -l nodes=$NUM_NODES,walltime=$WALLTIME 'bash scripts/run-sites-test.sh'" | grep "OAR_JOB_ID" | cut -d= -f2)
     
     if [ -z "$JOB_ID" ]; then
-        echo "❌ Failed to submit job on $SITE"
+        echo "Failed to submit job on $SITE"
         continue
     fi
     

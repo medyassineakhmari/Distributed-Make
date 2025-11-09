@@ -1,0 +1,40 @@
+# --- Jump host (access machine) ---
+Host grid
+  User <login>                         # ← your grid username
+  HostName access.grid5000.fr
+  IdentityFile ~/.ssh/id_ed25519       # ← change if you use a different key
+  IdentitiesOnly yes
+  ForwardAgent no
+  Compression yes
+
+  # Speed up repeated SSH/SCP/rsync: one TCP connection reused for many sessions
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%C             # short, hashed socket path
+  ControlPersist 10m                   # keep master connection open for 10 minutes
+
+  # Keep the connection healthy on flaky links
+  ServerAliveInterval 60
+  ServerAliveCountMax 3
+  TCPKeepAlive yes
+
+# --- Any site or node via the access machine ---
+# Usage examples:
+#   ssh rennes.grid
+#   scp file.txt grenoble.grid:~/      (and rsync works too)
+#   ssh graphite-3.nancy.grid          (node after your job starts)
+Host *.grid
+  User <login>                         # ← same username as above
+  ProxyCommand ssh grid -W "$(basename %h .grid):%p"
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+  ForwardAgent no
+  Compression yes
+
+  # Reuse the same master connection opened by 'grid'
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%C
+  ControlPersist 10m
+
+  ServerAliveInterval 60
+  ServerAliveCountMax 3
+  TCPKeepAlive yes
