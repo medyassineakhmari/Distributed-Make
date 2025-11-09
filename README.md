@@ -39,10 +39,17 @@ ssh -i ~/.ssh/id_rsa <your_username>@access.grid5000.fr
 ssh <site>
 ```
 
-4. **Décompresser l’archive :**
+4. **Création du répertoire "pingpong" (juste pour la première fois):**
 ```bash
-tar xzf pingpong.tar.gz
+mkdir pingpong
 ```
+
+5. **Décompresser l’archive dans "pingpong":**
+```bash
+tar xzf pingpong.tar.gz -C pingpong
+cd pingpong
+```
+
 
 ## Compilation et exécution
 
