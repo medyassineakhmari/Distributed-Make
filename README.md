@@ -9,7 +9,6 @@ Ce projet permet de déployer et exécuter l’application **PingPong** sur la p
 - [Déploiement sur Grid5000](#déploiement-sur-grid5000)  
 - [Compilation et exécution](#compilation-et-exécution)  
 - [Téléchargement des résultats](#téléchargement-des-résultats)  
-- [Structure des fichiers](#structure-des-fichiers)  
 
 ---
 
