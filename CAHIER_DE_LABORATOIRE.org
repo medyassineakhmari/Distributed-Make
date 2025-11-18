@@ -1,0 +1,287 @@
+#+TITLE: Systèmes distribués - Projet makefile parallèle
+#+AUTHOR: OUAHMANE Yassine, YACOUBI Wail, AKHMARI Mohammed Yassine, ELKASIRI Hajar
+#+OPTIONS: toc:2 num:t ^:nil
+
+* Accès à Grid5000 et organisation générale du déploiement
+      -> COMMIT: 16e323b2891b74a52a8e14829ca0c3e08527df78    -> DATE: November 9, 2025 at 2:28 AM
+
+L’accès à Grid5000 repose sur SSH. Afin de faciliter les connexions et d’améliorer les performances, nous avons configuré le fichier =~/.ssh/config= de manière à :
+
+- *centraliser* l’accès via une machine d’entrée (jump host) appelée ~grid~ ;
+- *masquer la complexité* des sites internes (~rennes~, ~grenoble~, ~nancy~, etc.) derrière des alias de la forme ~<site>.grid~ ;
+- *réutiliser automatiquement* une connexion SSH déjà ouverte, pour accélérer les enchaînements de ~ssh~, ~scp~ ou ~rsync~ (multiplexage).
+
+En pratique, cette configuration permet par exemple de taper :
+
+- ~ssh grenoble.grid~ ou ~ssh graphite-3.nancy.grid~,
+
+sans se soucier des options de proxy ou de la machine d’accès intermédiaire.
+
+On peut comparer cela à l’infrastructure d’un grand groupe industriel : l’utilisateur voit une seule “porte d’entrée” (le siège social), alors qu’en coulisses, des routes sécurisées relient chaque site. La configuration SSH joue justement le rôle de ces routes internes :
+
+- elle *simplifie* l’accès pour l’utilisateur ;
+- elle *réduit* la latence de connexion (merci au multiplexage) ;
+- elle reste *sécurisée* (clé dédiée, pas de forwarding d’agent SSH).
+
+Cette étape d’accès est le point de départ de tout le protocole expérimental décrit plus loin.
+
+* Protocole expérimental de déploiement sur Grid5000 et des tests Ping Pong 
+      -> COMMIT: f925e7ce4594c4d83f49e80fa5381d4f53c8b5af  -> DATE: November 9, 2025 at 2:18 AM
+
+Dans cette section, nous décrivons la chaîne complète qui va :
+
+1. de la préparation du projet en local,
+2. jusqu’au lancement effectif des tests de Ping Pong sur les nœuds réservés.
+
+L’objectif est d’obtenir une procédure *reproductible* et *portable* entre sites Grid5000.
+
+** Phase 1 : Préparation et déploiement du projet
+
+*** Création de l’archive du projet
+
+Sur la machine locale, l’ensemble du projet (code source, scripts, etc.) est regroupé dans une archive compressée :
+
+#+BEGIN_SRC bash
+tar czf pingpong.tar.gz .
+#+END_SRC
+
+Cette archive est l’unité de déploiement : elle peut être envoyée sur n’importe quel site Grid5000.
+
+*** Transfert de l’archive vers Grid5000
+
+L’archive est ensuite transférée vers un site Grid5000 à l’aide de ~scp~.  
+Nous utilisons un tunnel SSH via la machine d’accès (~access.grid5000.fr~) grâce à l’option ~ProxyJump~ :
+
+#+BEGIN_SRC bash
+scp -i ~/.ssh/id_rsa -o "ProxyJump=<username>@access.grid5000.fr" \
+    pingpong.tar.gz <username>@<site>:
+#+END_SRC
+
+où :
+
+- ~<username>~ est le login Grid5000 ;
+- ~<site>~ est le frontal du site ciblé (par exemple ~grenoble.grid5000.fr~ ou simplement ~grenoble~, selon la configuration).
+
+*** Connexion au site et installation du projet
+
+Une fois l’archive copiée, on se connecte au site, puis on installe le projet dans un répertoire dédié :
+
+#+BEGIN_SRC bash
+ssh <site>.grid
+
+mkdir pingpong
+tar xzf pingpong.tar.gz -C pingpong
+cd pingpong
+#+END_SRC
+
+À ce stade, tous les fichiers nécessaires (scripts, code source, etc.) sont présents sur le site et prêts à être compilés ou exécutés.  
+Cette logique rappelle le déploiement d’un microservice dans un grand cloud : on prépare une “image” (ici l’archive), on la pousse dans l’infrastructure, puis on la déploie sur une machine cible.
+
+** Phase 2 : Lancement des tests sur les nœuds réservés
+
+*** Préparation des scripts d’exécution
+
+Nous nous assurons que les scripts nécessaires sont exécutables (script de compilation, scripts de lancement, etc.) :
+
+#+BEGIN_SRC bash
+chmod +x compile.sh scripts/*
+#+END_SRC
+
+*** Réservation de ressources avec OAR
+
+Les ressources de calcul sont réservées via le gestionnaire de jobs OAR.  
+Dans notre cas, nous demandons une session interactive avec :
+
+- 2 nœuds de calcul ;
+- une durée maximale de 30 minutes.
+
+#+BEGIN_SRC bash
+oarsub -I -l nodes=2,walltime=0:30
+#+END_SRC
+
+Une fois la réservation accordée, OAR nous connecte automatiquement dans l’environnement associé au job (typiquement un nœud frontal ou un nœud de calcul).
+
+*** Lancement de l’application de test
+
+Enfin, les expériences Ping Pong (Normal et I/O) sont lancées via un script dédié :
+
+#+BEGIN_SRC bash
+./start.sh
+#+END_SRC
+
+Ce script se charge typiquement de :
+
+- compiler le code si nécessaire (via ~compile.sh~) ;
+- distribuer les exécutables ou scripts sur les nœuds concernés ;
+- exécuter les différentes expériences (Ping Pong Normal, Ping Pong I/O) ;
+- collecter les résultats (fichiers de log, mesures de latence et de débit).
+
+Ce protocole est conçu pour être rejouable. À partir d’une archive unique, on peut :
+
+- redéployer rapidement le projet sur un autre site Grid5000 ;
+- relancer exactement la même campagne d’expériences.
+
+C’est la même logique que les pipelines de déploiement continus utilisés dans les grandes entreprises pour tester la performance de leurs applications sur plusieurs environnements.
+
+* Stratégie de mesure : latence et débit
+
+Pour exploiter correctement les résultats des tests Ping Pong, nous avons défini une méthodologie précise pour :
+
+- estimer une *latence de base* (baseline) du système,
+- mesurer le *RTT* pour différentes tailles de messages,
+- dériver un *débit effectif* en isolant le temps de transfert des données.
+
+Cette stratégie est implémentée directement dans le code du maître (~Master.java~), qui pilote les appels RMI vers les processus travailleurs.
+
+** Mesure de la latence (baseline RTT)
+    -> Source_Site : Toulouse
+
+La *latence* représente le temps nécessaire pour qu’un message effectue un aller-retour entre le maître et un travailleur. Dans notre implémentation, nous procédons en deux étapes :
+
+1. Pour chaque nœud travailleur, le maître se connecte au registre RMI (~LocateRegistry.getRegistry(host, 1099)~) et récupère un stub de service (~PingPongService~).
+2. Une *phase d’échauffement* est lancée :
+
+   - le maître envoie 30 requêtes ~ping~ avec une charge minimale (~new byte[]{1}~, soit 1 octet) ;
+   - pour chaque requête, on mesure le temps aller-retour (RTT) en millisecondes ;
+   - parmi ces 30 valeurs, on conserve le **minimum** comme *baseline RTT* pour ce nœud.
+
+Ce choix du minimum vise à approcher une *latence “idéale”* dans des conditions peu chargées, en filtrant les éventuels pics ponctuels (garbage collector, scheduling, etc.).  
+On obtient ainsi une approximation de la latence incompressible due :
+
+- au réseau,
+- à la pile RMI/TCP,
+- et au temps de traitement minimal côté serveur.
+
+On peut voir cette baseline comme le meilleur “temps de réaction” observé pour un message quasi vide : l’équivalent, sur une autoroute, du passage d’une seule voiture à un péage sans file d’attente.
+
+** Mesure du RTT et calcul du débit effectif
+
+Une fois la latence de base mesurée pour un nœud, nous passons aux tests de débit pour différentes tailles de messages.  
+
+*** Tailles de messages testées
+
+Les tailles utilisées sont (en kilo-octets) :
+
+#+BEGIN_SRC text
+{1, 2, 5, 10, 20, 50, 100, 200, 500, 1024, 2048, 5120, 10240}
+#+END_SRC
+
+soit des messages allant de 1 KB jusqu’à 10 MB (~10240 KB~).
+
+Pour chaque taille ~sizeKB~, le maître alloue un tableau :
+
+#+BEGIN_SRC java
+byte[] data = new byte[sizeKB * 1024];
+#+END_SRC
+
+Les données sont donc *générées en mémoire*, sans accès au disque dans le cas du Ping Pong Normal.
+
+*** RTT médian par taille
+
+Pour chaque ~sizeKB~, le maître envoie 9 requêtes ~ping(data)~ consécutives.  
+On obtient ainsi, pour chaque taille, un **RTT médian** ~rttMs~ (en millisecondes).  
+L’utilisation de la médiane rend la mesure plus robuste aux variations ponctuelles (par exemple, une pause de la JVM).
+
+*** Débit effectif (RTT – baseline)
+
+Le débit est calculé à partir du RTT médian et de la baseline RTT :
+
+1. On estime le *temps de transfert effectif* en soustrayant la latence de base :
+
+   #+BEGIN_SRC java
+   double transferTimeS = (rttMs - baselineRTT) / 1000.0; // en secondes
+   #+END_SRC
+
+2. Pour chaque couple (nœud, taille) :
+
+   - on a un **RTT médian** (latence observée pour cette taille),
+   - on a un **débit effectif** estimé en retirant la latence de base.
+
+L’analogie de l’autoroute se reformule ici :
+
+- la baseline RTT correspond au *péage* (temps incompressible) ;
+- ~rttMs - baselineRTT~ correspond au temps passé *sur la route* ;
+- le débit mesure combien de “tonnes de marchandises” (MB) on peut transporter par seconde une fois le péage franchi.
+
+* Résultats expérimentaux : scénarios Ping Pong
+
+Les expériences de type « Ping Pong » consistent à échanger des messages entre un nœud maître et un ou plusieurs nœuds travailleurs, en mesurant latence et débit selon la méthodologie précédente.  
+Nous avons mis en place deux variantes, qui se distinguent par la manière dont les données sont produites.
+
+** Ping Pong Normal (en mémoire)
+
+Dans le *Ping Pong Normal* :
+
+- les données échangées sont /générées dynamiquement en mémoire/ par le maître ;
+- les tailles de messages varient de 1 KB à 10 MB (tableau ~SIZES_KB~) ;
+- pour chaque taille, 9 RTT sont mesurés et la médiane est utilisée ;
+- la baseline RTT est calculée une fois par nœud à partir de 30 ping d’1 octet, en prenant le minimum.
+
+Les métriques collectées sont :
+
+- la *latence* (RTT médian par taille),
+- le *débit* (MB/s) dérivé de ~(RTT - baselineRTT)~.
+
+Ce scénario vise à évaluer *exclusivement* les performances du réseau (et de la pile RMI) dans un contexte où les données sont déjà en mémoire.  
+Il donne une estimation du comportement “idéal” des communications, sans être perturbé par les performances du stockage.
+
+C’est comparable à un test de bande passante dans un centre de données où l’on fait transiter des flux directement entre deux services, sans accès à une base de données ou à un système de fichiers.
+
+** Ping Pong I/O (avec E/S disque)
+
+Dans le *Ping Pong I/O* (implémenté dans un autre exécutable), la logique de mesure reste la même, mais la *source des données* change :
+
+- les données ne sont plus créées en mémoire ;
+- elles sont lues depuis des *fichiers locaux* sur chaque nœud travailleur, puis transmises ;
+- on applique le même schéma : baseline RTT, RTT médian par taille, débit effectif.
+
+Ce scénario est plus proche des usages réels :
+
+- de nombreuses applications distribuées (traitement de logs, apprentissage automatique, bases de données distribuées) lisent des données sur disque avant de les envoyer à d’autres nœuds ;
+- le système de fichiers et le matériel de stockage deviennent alors des éléments potentiellement limitants.
+
+On peut comparer cela à une chaîne logistique : dans le Ping Pong Normal, les camions circulent à vide (on teste uniquement la route) ; dans le Ping Pong I/O, les camions doivent attendre que l’entrepôt charge les marchandises, ce qui peut ralentir l’ensemble.
+
+** Lecture croisée des résultats : Normal vs I/O
+    -> COMMIT: 4f795928733b6b91a8d91d2819371d527275269c  -> DATE: November 18, 2025 at 12:18 AM
+
+La confrontation des deux scénarios permet de comprendre précisément où se situent les goulots d’étranglement :
+
+#+CAPTION: Comparaison de la latence entre Ping Pong Normal et Ping Pong I/O.
+[[file:scripts/insights/PingPong/Mono-Site/Latence/comparison_rtt.png]]
+
+#+CAPTION: Comparaison du débit entre Ping Pong Normal et Ping Pong I/O.
+[[file:scripts/insights/PingPong/Mono-Site/Débit/comparison_throughtput.png]]
+
+- *Dans le Ping Pong Normal* :
+  - la latence mesurée se rapproche de la latence minimale du système (limite réseau + RMI) ;
+  - le débit reflète surtout la bande passante effective entre nœuds.
+
+- *Dans le Ping Pong I/O* :
+  - la latence apparente augmente (temps d’accès disque + transmission réseau) ;
+  - le débit global diminue, le système de fichiers pouvant devenir le facteur limitant.
+
+Ainsi :
+
+- la différence de *latence* entre les deux scénarios quantifie l’impact des E/S disque sur les temps de réponse ;
+- la différence de *débit* indique dans quelle mesure le sous-système de stockage dégrade les performances par rapport à ce que le réseau pourrait fournir seul.
+
+** Expérimentations multi-sites (Nancy, Rennes, Grenoble, Nantes, Lille, Lyon)
+   -> COMMIT: 3165eb96c836779e2de164dafe12e4b95871a5f5  -> DATE: November 17, 2025 at 11:24 PM
+   :END:
+
+On a testé 6 sites Grid5000 différents pour comparer leurs performances réseau, en envoyant un seul message de même taille entre deux nœuds dans chaque site.
+
+#+CAPTION: Comparaison de la latence et du débit entre deux nœuds sur six sites Grid5000.
+[[file:scripts/insights/Multi-Sites/Throughput-Latency.jpeg]]
+
+La figure présente une comparaison de la latence (en ms) et du débit (en MBytes/s) entre deux nœuds sur six sites Grid5000 (Nancy, Rennes, Grenoble, Nantes, Lille et Lyon).  
+On observe que :
+
+- *Nancy* offre à la fois la latence la plus faible (~0,253 ms) et de loin le meilleur débit (~1128 MB/s), ce qui en fait le site le plus performant dans cette expérience.
+
+- *Rennes* et *Grenoble* ont des latences légèrement plus élevées (~0,266–0,281 ms) avec des débits intermédiaires (environ 520–616 MB/s).
+
+- *Nantes*, *Lille* et surtout *Lyon* présentent les latences les plus élevées (~0,284–0,325 ms) et les débits les plus faibles (~363–426 MB/s), Lyon étant le site le moins performant parmi les six.
+
+Globalement, la figure met en évidence une corrélation : les sites avec la meilleure latence sont aussi ceux qui offrent le meilleur débit, tandis que les sites plus lents en latence sont également plus limités en bande passante effective.
