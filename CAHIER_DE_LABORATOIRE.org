@@ -251,7 +251,7 @@ La confrontation des deux scénarios permet de comprendre précisément où se s
 [[file:scripts/insights/PingPong/Mono-Site/Latence/comparison_rtt.png]]
 
 #+CAPTION: Comparaison du débit entre Ping Pong Normal et Ping Pong I/O.
-[[file:scripts/insights/PingPong/Mono-Site/Débit/comparison_throughtput.png]]
+[[file:scripts/insights/PingPong/Mono-Site/Débit/comparison_throughput.png]]
 
 - *Dans le Ping Pong Normal* :
   - la latence mesurée se rapproche de la latence minimale du système (limite réseau + RMI) ;
@@ -273,7 +273,7 @@ Ainsi :
 On a testé 6 sites Grid5000 différents pour comparer leurs performances réseau, en envoyant un seul message de même taille entre deux nœuds dans chaque site.
 
 #+CAPTION: Comparaison de la latence et du débit entre deux nœuds sur six sites Grid5000.
-[[file:scripts/insights/Multi-Sites/Throughput-Latency.jpeg]]
+[[file:scripts/insights/PingPong/Multi-Sites/Throughput-Latency.jpeg]]
 
 La figure présente une comparaison de la latence (en ms) et du débit (en MBytes/s) entre deux nœuds sur six sites Grid5000 (Nancy, Rennes, Grenoble, Nantes, Lille et Lyon).  
 On observe que :
