@@ -1,4 +1,5 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 # Compiled class files
 *.class
 bin/
@@ -38,6 +39,8 @@ wordcount
 .DS_Store
 Thumbs.db
 =======
+=======
+>>>>>>> Stashed changes
 # Compiled class files
 *.class
 bin/
@@ -77,4 +80,7 @@ wordcount
 # OS files
 .DS_Store
 Thumbs.db
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
