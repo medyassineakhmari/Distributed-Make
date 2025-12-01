@@ -23,41 +23,38 @@ public class Master {
                 
                 // Warmup
                 System.out.println("Warming up...");
-                double baselineRTT = Double.MAX_VALUE;
+                double baselineRTT = 0;
                 for (int i = 0; i < 30; i++) {
                     long start = System.nanoTime();
                     service.ping(new byte[]{1});
                     long end = System.nanoTime();
-                    double rtt = (end - start) / 1_000_000.0;
+                    baselineRTT = (end - start) / 1_000_000.0;
                     
-                    // Garder le minimum
-                    if (rtt < baselineRTT) {
-                        baselineRTT = rtt;
-                    }
                 }
+                baselineRTT /= 30.0;
                 System.out.printf("Baseline RTT: %.3f ms\n\n", baselineRTT);
                 
                 // Tests
                 for (int sizeKB : SIZES_KB) {
                     byte[] data = new byte[sizeKB * 1024];
                     
-                    // Répéter 5 fois et prendre la médiane
-                    double[] times = new double[9];
-                    for (int rep = 0; rep < 9; rep++) {
+                    // Répéter 30 fois et prendre la médiane
+                    double[] times = new double[30];
+                    for (int rep = 0; rep < 30; rep++) {
                         long start = System.nanoTime();
                         service.ping(data);
                         long end = System.nanoTime();
-                        times[rep] = (end - start) / 1_000_000.0;
+                        times[rep] = (end - start) / 1_000_000.0;   // en ms
+                        System.out.println("latency " + (rep+1) + " : " + times[rep] + " ms");
                     }
                     Arrays.sort(times);
-                    double rttMs = times[4]; // Médiane
+                    double rttMs = times[15]; // Médiane
+                    System.out.println("Median rttMs: " + rttMs + " ms");
                     
                     double throughputMBps = 0;
-                    if (sizeKB > 1) {
-                        double transferTimeS = (rttMs - baselineRTT) / 1000.0;
-                        if (transferTimeS > 0) {
-                            throughputMBps = (sizeKB / 1024.0) / transferTimeS;
-                        }
+                    double transferTimeS = (rttMs - baselineRTT) / 1000.0;
+                    if (transferTimeS > 0) {
+                        throughputMBps = (sizeKB / 1024.0) / transferTimeS;
                     }
                     
                     Metric m = new Metric(host, sizeKB, rttMs, throughputMBps, "normal");

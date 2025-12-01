@@ -55,9 +55,9 @@ public class MasterIO {
                     Arrays.fill(data, (byte) 'a');
                     Files.write(Paths.get(localPath), data);
                     
-                    // Répéter 5 fois
-                    double[] times = new double[9];
-                    for (int rep = 0; rep < 9; rep++) {
+                    // Répéter 30 fois
+                    double[] times = new double[30];
+                    for (int rep = 0; rep < 30; rep++) {
                         long start = System.nanoTime();
                         
                         // LECTURE locale
@@ -74,7 +74,7 @@ public class MasterIO {
                         times[rep] = (end - start) / 1_000_000.0;
                     }
                     Arrays.sort(times);
-                    double rttMs = times[4]; // Médiane
+                    double rttMs = times[15]; // Médiane
                     
                     double throughputMBps = 0;
                     if (sizeKB > 1) {
