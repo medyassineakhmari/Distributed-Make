@@ -65,7 +65,7 @@ oarsub -I -l nodes=2,walltime=0:30
 
 3. **Lancer l’application :**
 ```bash
-./start.sh
+./scripts/start.sh
 ```
 
 ## Téléchargement des résultats
