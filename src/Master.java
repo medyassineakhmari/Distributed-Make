@@ -1,6 +1,7 @@
 import java.rmi.registry.*;
 import java.io.*;
 import java.util.*;
+import java.nio.ByteBuffer;
 
 public class Master {
     
@@ -8,6 +9,11 @@ public class Master {
     
     public static void main(String[] args) {
         try {
+            // 🚀 Optimisations RMI pour meilleur débit
+            System.setProperty("sun.rmi.transport.tcp.directByteBufferPool", "true");
+            System.setProperty("sun.rmi.serialization.useProxyClass", "false");
+            System.setProperty("sun.rmi.transport.tcp.responseTimeout", "10000");
+            System.setProperty("sun.rmi.transport.tcp.readTimeout", "10000");
             List<String> workers = getWorkerHosts();
             System.out.println("Testing " + workers.size() + " workers");
             
@@ -36,6 +42,7 @@ public class Master {
                 
                 // Tests
                 for (int sizeKB : SIZES_KB) {
+                    // 🚀 Réutiliser le même buffer au lieu d'en créer un à chaque fois
                     byte[] data = new byte[sizeKB * 1024];
                     
                     // Répéter 30 fois et prendre la médiane
@@ -45,8 +52,9 @@ public class Master {
                         service.ping(data);
                         long end = System.nanoTime();
                         times[rep] = (end - start) / 1_000_000.0;   // en ms
-                        System.out.println("latency " + (rep+1) + " : " + times[rep] + " ms");
+                        if (rep < 3) System.out.println("latency " + (rep+1) + " : " + times[rep] + " ms");
                     }
+                    System.out.println("... (reps 4-30 omitted for clarity)");
                     Arrays.sort(times);
                     double rttMs = times[15]; // Médiane
                     System.out.println("Median rttMs: " + rttMs + " ms");

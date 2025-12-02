@@ -1,0 +1,14 @@
+host,size_kb,rtt_ms,throughput_mbps,type
+dahu-21.grenoble.grid5000.fr,1,0.608779,1.628386,normal
+dahu-21.grenoble.grid5000.fr,2,0.512691,3.878143,normal
+dahu-21.grenoble.grid5000.fr,5,0.255567,19.808589,normal
+dahu-21.grenoble.grid5000.fr,10,0.260849,38.786069,normal
+dahu-21.grenoble.grid5000.fr,20,0.328925,61.062297,normal
+dahu-21.grenoble.grid5000.fr,50,0.491739,101.162173,normal
+dahu-21.grenoble.grid5000.fr,100,0.391818,255.143186,normal
+dahu-21.grenoble.grid5000.fr,200,0.781840,252.742473,normal
+dahu-21.grenoble.grid5000.fr,500,1.167697,421.429920,normal
+dahu-21.grenoble.grid5000.fr,1024,1.614039,623.063920,normal
+dahu-21.grenoble.grid5000.fr,2048,2.658257,754.947805,normal
+dahu-21.grenoble.grid5000.fr,5120,6.508378,769.312344,normal
+dahu-21.grenoble.grid5000.fr,10240,14.219307,703.717894,normal

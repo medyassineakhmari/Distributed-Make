@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package pingpong;
+
+// Service definition for PingPong communication
+service PingPongService {
+  rpc Ping(PingRequest) returns (PingReply) {}
+  rpc PingWithIO(PingRequest) returns (PingReply) {}
+  rpc CreateTestFile(CreateFileRequest) returns (Empty) {}
+  rpc Hello(Empty) returns (HelloReply) {}
+}
+
+// Request/Response messages
+message PingRequest {
+  bytes data = 1;
+  string file_path = 2;
+}
+
+message PingReply {
+  bytes data = 1;
+}
+
+message CreateFileRequest {
+  string file_path = 1;
+  int32 size_kb = 2;
+}
+
+message HelloReply {
+  string message = 1;
+}
+
+message Empty {
+}
