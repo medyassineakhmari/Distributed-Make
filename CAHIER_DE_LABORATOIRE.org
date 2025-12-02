@@ -324,7 +324,7 @@ Les graphiques de comparaison entre Ping Pong Normal et Ping Pong I/O révèlent
 *** Observations principales
 
 #+CAPTION: Comparaison de la latence entre Ping Pong Normal et Ping Pong I/O.
-[[file:scripts/insights/PingPong/Mono-Site/latence/comparison_rtt_v2.png]]
+[[file:scripts/insights/PingPong/Mono-Site/Latence/comparison_rtt_v2.png]]
 
 #+CAPTION: Comparaison du débit entre Ping Pong Normal et Ping Pong I/O.
 [[file:scripts/insights/PingPong/Mono-Site/Débit/comparison_throughput_v2.png]]
