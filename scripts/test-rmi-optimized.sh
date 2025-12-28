@@ -33,7 +33,7 @@ echo ""
 # ===== 2. NETWORK DIAGNOSTIC =====
 echo "[2/6] Running network diagnostic..."
 bash scripts/network-diagnostic.sh > network-diagnostic-rmi-opt-test.txt 2>&1
-echo "✓ Diagnostic saved to: network-diagnostic-rmi-opt-test.txt"
+echo "[OK] Diagnostic saved to: network-diagnostic-rmi-opt-test.txt"
 echo ""
 
 # ===== 3. DÉPLOYER WORKERS =====
@@ -49,7 +49,7 @@ echo ""
 
 echo "Running PingPong with standard RMI..."
 if java Master > test-rmi-baseline.log 2>&1; then
-    echo "✓ RMI Baseline test completed"
+    echo "[OK] RMI Baseline test completed"
     if [ -f "pingpong-normal.csv" ]; then
         mv pingpong-normal.csv pingpong-rmi-baseline.csv
         echo "  Results: pingpong-rmi-baseline.csv"
@@ -73,7 +73,7 @@ echo "  - TCP timeouts increased to 10s"
 echo "  - Minimal logging enabled"
 echo ""
 
-# 🚀 JVM OPTIMIZATIONS
+#  JVM OPTIMIZATIONS
 RMI_OPTS="-Dsun.rmi.transport.tcp.directByteBufferPool=true"
 RMI_OPTS="$RMI_OPTS -Dsun.rmi.serialization.useProxyClass=false"
 RMI_OPTS="$RMI_OPTS -Dsun.rmi.transport.tcp.responseTimeout=10000"
@@ -81,7 +81,7 @@ RMI_OPTS="$RMI_OPTS -Dsun.rmi.transport.tcp.readTimeout=10000"
 
 echo "Running PingPong with RMI optimizations..."
 if java $RMI_OPTS Master > test-rmi-optimized.log 2>&1; then
-    echo "✓ RMI Optimized test completed"
+    echo "[OK] RMI Optimized test completed"
     if [ -f "pingpong-normal.csv" ]; then
         mv pingpong-normal.csv pingpong-rmi-optimized.csv
         echo "  Results: pingpong-rmi-optimized.csv"
@@ -151,7 +151,7 @@ EOF
     awk -F',' 'NR>1 {print $4}' pingpong-rmi-optimized.csv | sort -rn | head -1 >> rmi-optimization-report.txt
     
     echo ""
-    echo "✓ Comparison report generated: rmi-optimization-report.txt"
+    echo "[OK] Comparison report generated: rmi-optimization-report.txt"
     
     # Show summary
     echo ""

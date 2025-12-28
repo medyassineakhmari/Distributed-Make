@@ -26,7 +26,7 @@ echo ""
 # ===== 2. NETWORK DIAGNOSTIC =====
 echo "[2/6] Running network diagnostic..."
 bash scripts/network-diagnostic.sh > network-diagnostic-omnipath-test.txt 2>&1
-echo "✓ Diagnostic saved to: network-diagnostic-omnipath-test.txt"
+echo "[OK] Diagnostic saved to: network-diagnostic-omnipath-test.txt"
 echo ""
 
 # ===== 3. DÉPLOYER WORKERS =====
@@ -42,7 +42,7 @@ echo ""
 
 echo "Running PingPong on Ethernet network..."
 if java Master > test-ethernet.log 2>&1; then
-    echo "✓ Ethernet test completed"
+    echo "[OK] Ethernet test completed"
     if [ -f "pingpong-normal.csv" ]; then
         mv pingpong-normal.csv pingpong-ethernet.csv
         echo "  Results: pingpong-ethernet.csv"
@@ -61,7 +61,7 @@ echo ""
 
 echo "Running PingPong on Omni-Path network..."
 if java MasterOPA > test-opa.log 2>&1; then
-    echo "✓ Omni-Path test completed"
+    echo "[OK] Omni-Path test completed"
     if [ -f "pingpong-opa.csv" ]; then
         echo "  Results: pingpong-opa.csv"
     fi
@@ -76,7 +76,7 @@ echo ""
 echo "[6/6] Generating comparison graphs..."
 if [ -f "pingpong-ethernet.csv" ] && [ -f "pingpong-opa.csv" ]; then
     if python3 scripts/plot-ethernet-vs-opa.py; then
-        echo "✓ Comparison plots generated"
+        echo "[OK] Comparison plots generated"
     else
         echo "⚠ Failed to generate plots (matplotlib/pandas may not be available)"
     fi

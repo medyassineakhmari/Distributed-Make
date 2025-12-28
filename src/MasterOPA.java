@@ -19,7 +19,7 @@ public class MasterOPA {
     
     public static void main(String[] args) {
         try {
-            // 🚀 Optimisations RMI pour meilleur débit
+            //  Optimisations RMI pour meilleur débit
             System.setProperty("sun.rmi.transport.tcp.directByteBufferPool", "true");
             System.setProperty("sun.rmi.serialization.useProxyClass", "false");
             System.setProperty("sun.rmi.transport.tcp.responseTimeout", "10000");
@@ -119,7 +119,7 @@ public class MasterOPA {
                 if (!hostname.isEmpty() && !hostname.equals(masterHost)) {
                     String opaIP = resolveToOPAIP(hostname);
                     hostsToIPs.put(hostname, opaIP);
-                    System.out.println("  " + hostname + " → " + opaIP);
+                    System.out.println("  " + hostname + " -> " + opaIP);
                 }
             }
         }
@@ -132,7 +132,7 @@ public class MasterOPA {
      * 
      * Stratégie :
      * 1. Essaie d'abord de résoudre vers 172.18.x.x directement
-     * 2. Si échoue, essaie de construire l'IP OPA depuis l'IP Ethernet (172.16.x.x → 172.18.x.x)
+     * 2. Si échoue, essaie de construire l'IP OPA depuis l'IP Ethernet (172.16.x.x -> 172.18.x.x)
      * 3. Si toujours échoue, fallback sur Ethernet
      */
     private static String resolveToOPAIP(String hostname) {
@@ -142,7 +142,7 @@ public class MasterOPA {
             for (InetAddress addr : addrs) {
                 String ip = addr.getHostAddress();
                 if (isOPANetwork(ip)) {
-                    System.out.println("    ✓ Found OPA IP directly: " + ip);
+                    System.out.println("    [OK] Found OPA IP directly: " + ip);
                     return ip;
                 }
             }
@@ -158,7 +158,7 @@ public class MasterOPA {
             // Construire l'IP OPA en remplaçant 172.16.x.x par 172.18.x.x
             if (ethernetIP.startsWith("172.16.")) {
                 String opaIP = ethernetIP.replace("172.16.", "172.18.");
-                System.out.println("    ✓ Converted Ethernet to OPA: " + ethernetIP + " → " + opaIP);
+                System.out.println("    [OK] Converted Ethernet to OPA: " + ethernetIP + " -> " + opaIP);
                 return opaIP;
             }
         } catch (Exception e) {
@@ -191,6 +191,6 @@ public class MasterOPA {
                 writer.println(m);
             }
         }
-        System.out.println("\n✓ Results saved: " + filename);
+        System.out.println("\n[OK] Results saved: " + filename);
     }
 }

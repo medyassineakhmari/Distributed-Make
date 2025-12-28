@@ -45,7 +45,7 @@ for node in $(cat $OAR_NODE_FILE | uniq); do
     fi
 done
 
-echo "✓ Test completed!"
+echo "[OK] Test completed!"
 echo "Results:"
 echo "  - pingpong-normal.csv"
 echo "  - pingpong-io.csv"

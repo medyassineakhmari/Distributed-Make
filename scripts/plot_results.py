@@ -26,7 +26,7 @@ def plot_single_site():
     plt.xscale('log')
     plt.tight_layout()
     plt.savefig('comparison_rtt.png', dpi=300)
-    print('✓ comparison_rtt.png created')
+    print('[OK] comparison_rtt.png created')
     
     # GRAPHE 2: Throughput
     plt.figure(figsize=(10, 6))
@@ -45,7 +45,7 @@ def plot_single_site():
     plt.xscale('log')
     plt.tight_layout()
     plt.savefig('comparison_throughput.png', dpi=300)
-    print('✓ comparison_throughput.png created')
+    print('[OK] comparison_throughput.png created')
 
 def plot_sites_comparison():
     """Graphe 3: Comparaison multi-sites (version corrigée)"""
@@ -108,7 +108,7 @@ def plot_sites_comparison():
     
     fig.tight_layout()
     plt.savefig('sites_comparison.png', dpi=300, bbox_inches='tight')
-    print('✓ sites_comparison.png created')
+    print('[OK] sites_comparison.png created')
 
 if __name__ == '__main__':
     mode = sys.argv[1] if len(sys.argv) > 1 else 'single'

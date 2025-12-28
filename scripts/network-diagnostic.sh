@@ -48,11 +48,11 @@ if [ -n "$OAR_NODE_FILE" ] && [ -f "$OAR_NODE_FILE" ]; then
                 IFACE=$(echo "$ROUTE_OUTPUT" | grep -o "dev [^ ]*" | awk '{print $2}')
                 
                 if [[ "$IFACE" == "ib0" ]]; then
-                    echo -e "${GREEN}✓ $node${NC} ($IP) → ${GREEN}ib0 (Omni-Path/InfiniBand - FAST)${NC}"
+                    echo -e "${GREEN}[OK] $node${NC} ($IP) -> ${GREEN}ib0 (Omni-Path/InfiniBand - FAST)${NC}"
                 elif [[ "$IFACE" == "br0" ]] || [[ "$IFACE" == eth* ]]; then
-                    echo -e "${YELLOW}⊙ $node${NC} ($IP) → ${YELLOW}$IFACE (Ethernet - STANDARD)${NC}"
+                    echo -e "${YELLOW}⊙ $node${NC} ($IP) -> ${YELLOW}$IFACE (Ethernet - STANDARD)${NC}"
                 else
-                    echo -e "? $node ($IP) → $IFACE"
+                    echo -e "? $node ($IP) -> $IFACE"
                 fi
             fi
         fi
@@ -147,7 +147,7 @@ DEFAULT_IFACE=$(ip route | grep "^default" | awk '{print $5}' | head -1)
 
 if [[ "$DEFAULT_IFACE" == "ib0" ]]; then
     echo -e "${GREEN}Default route uses ib0 (Omni-Path/InfiniBand)${NC}"
-    echo "✓ Your PingPong tests will use the FAST network"
+    echo "[OK] Your PingPong tests will use the FAST network"
 elif [[ "$DEFAULT_IFACE" == "br0" ]] || [[ "$DEFAULT_IFACE" == eth* ]]; then
     echo -e "${YELLOW}Default route uses $DEFAULT_IFACE (Ethernet)${NC}"
     

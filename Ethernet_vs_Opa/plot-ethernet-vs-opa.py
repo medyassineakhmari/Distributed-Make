@@ -85,7 +85,7 @@ def plot_comparison():
                 fontsize=10, style='italic', color='gray', alpha=0.7)
         plt.tight_layout()
         plt.savefig('comparison-ethernet-vs-opa-latency.png', dpi=300, bbox_inches='tight')
-        print('✓ comparison-ethernet-vs-opa-latency.png created')
+        print('[OK] comparison-ethernet-vs-opa-latency.png created')
         plt.close()
         
         # GRAPH 2: Throughput Comparison with Error Bars
@@ -119,7 +119,7 @@ def plot_comparison():
                 fontsize=10, style='italic', color='gray', alpha=0.7)
         plt.tight_layout()
         plt.savefig('comparison-ethernet-vs-opa-throughput.png', dpi=300, bbox_inches='tight')
-        print('✓ comparison-ethernet-vs-opa-throughput.png created')
+        print('[OK] comparison-ethernet-vs-opa-throughput.png created')
         plt.close()
         
         # Print summary statistics

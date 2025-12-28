@@ -68,7 +68,7 @@ for s in sizes:
         size_labels.append(f"{s}K")
 
 # Create throughput comparison
-print("\n📊 THROUGHPUT CURVES\n")
+print("\n THROUGHPUT CURVES\n")
 print("Baseline Throughput (MB/s):")
 max_thr = max(baseline_thr + optimized_thr)
 create_ascii_graph("Baseline", baseline_thr, max_thr, "MB/s")
@@ -88,10 +88,10 @@ for size_label, b, o in zip(size_labels, baseline_thr, optimized_thr):
     # Create bar
     if improvement >= 0:
         bar = "█" * int(improvement / 5) if improvement > 0 else "░"
-        indicator = "✅"
+        indicator = ""
     else:
         bar = "▓" * int(abs(improvement) / 5) if improvement < 0 else "░"
-        indicator = "❌"
+        indicator = "[ERROR]"
     
     bar = bar[:20]  # Max 20 chars
     print(f"{size_label:<8} | {improvement:>+7.1f}% {indicator} | {bar}")
@@ -108,14 +108,14 @@ create_ascii_graph("Optimized", optimized_rtt, max_rtt, "ms")
 
 # Performance zones
 print("\n" + "="*100)
-print("\n🎯 PERFORMANCE ZONES\n")
+print("\n PERFORMANCE ZONES\n")
 
 print("GREEN ZONE (Optimization Effective, >20% improvement):")
 green_count = 0
 for size_label, b, o in zip(size_labels, baseline_thr, optimized_thr):
     improvement = ((o - b) / b * 100) if b > 0 else 0
     if improvement > 20:
-        print(f"  ✅ {size_label:<8}: +{improvement:.1f}%")
+        print(f"   {size_label:<8}: +{improvement:.1f}%")
         green_count += 1
 if green_count == 0:
     print("  (none)")
@@ -135,7 +135,7 @@ red_count = 0
 for size_label, b, o in zip(size_labels, baseline_thr, optimized_thr):
     improvement = ((o - b) / b * 100) if b > 0 else 0
     if improvement < 0:
-        print(f"  ❌ {size_label:<8}: {improvement:.1f}%")
+        print(f"  [ERROR] {size_label:<8}: {improvement:.1f}%")
         red_count += 1
 if red_count == 0:
     print("  (none)")
@@ -176,13 +176,13 @@ if small_imp:
     print(f"    Average: {avg_small:+.1f}%")
     print(f"    Range: {min_small:+.1f}% to {max_small:+.1f}%")
     if avg_small > 20:
-        print(f"    Status: ✅ EXCELLENT (optimization highly effective)")
+        print(f"    Status:  EXCELLENT (optimization highly effective)")
     elif avg_small > 10:
-        print(f"    Status: ✅ GOOD (optimization beneficial)")
+        print(f"    Status:  GOOD (optimization beneficial)")
     elif avg_small > 0:
         print(f"    Status: ⚠️  MINIMAL (slight benefit)")
     else:
-        print(f"    Status: ❌ HARMFUL (degradation)")
+        print(f"    Status: [ERROR] HARMFUL (degradation)")
 
 if medium_imp:
     avg_medium = sum(medium_imp) / len(medium_imp)
@@ -192,13 +192,13 @@ if medium_imp:
     print(f"    Average: {avg_medium:+.1f}%")
     print(f"    Range: {min_medium:+.1f}% to {max_medium:+.1f}%")
     if avg_medium > 20:
-        print(f"    Status: ✅ EXCELLENT (optimization highly effective)")
+        print(f"    Status:  EXCELLENT (optimization highly effective)")
     elif avg_medium > 10:
-        print(f"    Status: ✅ GOOD (optimization beneficial)")
+        print(f"    Status:  GOOD (optimization beneficial)")
     elif avg_medium > 0:
         print(f"    Status: ⚠️  MINIMAL (slight benefit)")
     else:
-        print(f"    Status: ❌ HARMFUL (degradation)")
+        print(f"    Status: [ERROR] HARMFUL (degradation)")
 
 if large_imp:
     avg_large = sum(large_imp) / len(large_imp)
@@ -208,13 +208,13 @@ if large_imp:
     print(f"    Average: {avg_large:+.1f}%")
     print(f"    Range: {min_large:+.1f}% to {max_large:+.1f}%")
     if avg_large > 20:
-        print(f"    Status: ✅ EXCELLENT (optimization highly effective)")
+        print(f"    Status:  EXCELLENT (optimization highly effective)")
     elif avg_large > 10:
-        print(f"    Status: ✅ GOOD (optimization beneficial)")
+        print(f"    Status:  GOOD (optimization beneficial)")
     elif avg_large > 0:
         print(f"    Status: ⚠️  MINIMAL (slight benefit)")
     else:
-        print(f"    Status: ❌ HARMFUL (degradation)")
+        print(f"    Status: [ERROR] HARMFUL (degradation)")
 
 # Final verdict
 print("\n" + "="*100)
@@ -229,14 +229,14 @@ print(f"Overall average improvement: {overall_avg:+.1f}%")
 print(f"Maximum throughput improvement: {max_improvement:+.1f}%")
 
 if overall_avg > 10:
-    print("\n✅ RECOMMENDATION: Apply RMI optimization in production")
+    print("\n RECOMMENDATION: Apply RMI optimization in production")
     print("   The gains are meaningful and consistent across message sizes")
 elif overall_avg > 0:
     print("\n⚠️  RECOMMENDATION: Use with caution")
     print("   Benefits are marginal and inconsistent")
     print("   Consider selective application only for small messages")
 else:
-    print("\n❌ RECOMMENDATION: Do not use RMI optimization")
+    print("\n[ERROR] RECOMMENDATION: Do not use RMI optimization")
     print("   The approach causes performance degradation, especially for large messages")
     print("   Consider alternative technologies:")
     print("   • gRPC: Expected +100% improvement, production-ready")

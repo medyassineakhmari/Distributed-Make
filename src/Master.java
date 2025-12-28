@@ -9,7 +9,7 @@ public class Master {
     
     public static void main(String[] args) {
         try {
-            // 🚀 Optimisations RMI pour meilleur débit
+            //  Optimisations RMI pour meilleur débit
             System.setProperty("sun.rmi.transport.tcp.directByteBufferPool", "true");
             System.setProperty("sun.rmi.serialization.useProxyClass", "false");
             System.setProperty("sun.rmi.transport.tcp.responseTimeout", "10000");
@@ -42,7 +42,7 @@ public class Master {
                 
                 // Tests
                 for (int sizeKB : SIZES_KB) {
-                    // 🚀 Réutiliser le même buffer au lieu d'en créer un à chaque fois
+                    //  Réutiliser le même buffer au lieu d'en créer un à chaque fois
                     byte[] data = new byte[sizeKB * 1024];
                     
                     // Répéter 30 fois et prendre la médiane

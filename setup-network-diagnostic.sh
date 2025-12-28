@@ -10,11 +10,11 @@ echo ""
 
 # Vérifier qu'on est dans le bon répertoire
 if [ ! -f "compile.sh" ]; then
-    echo "❌ Error: compile.sh not found. Are you in the pingpong directory?"
+    echo "[ERROR] Error: compile.sh not found. Are you in the pingpong directory?"
     exit 1
 fi
 
-echo "✓ Found compile.sh - you're in the right place"
+echo "[OK] Found compile.sh - you're in the right place"
 echo ""
 
 # Rendre les scripts exécutables
@@ -27,7 +27,7 @@ chmod +x scripts/test-single-site.sh
 chmod +x scripts/test-all-sites.sh
 chmod +x scripts/network-diagnostic.sh
 
-echo "✓ All scripts are now executable"
+echo "[OK] All scripts are now executable"
 echo ""
 
 # Vérifier la présence des fichiers
@@ -42,22 +42,22 @@ FILES=(
 
 for file in "${FILES[@]}"; do
     if [ -f "$file" ]; then
-        echo "  ✓ $file"
+        echo "  [OK] $file"
     else
-        echo "  ❌ $file (MISSING)"
+        echo "  [ERROR] $file (MISSING)"
     fi
 done
 
 echo ""
 echo "========================================="
-echo "         Setup Complete! ✅"
+echo "         Setup Complete! "
 echo "========================================="
 echo ""
 echo "📖 Documentation:"
-echo "  → INTEGRATION_SUMMARY.md      (quick start)"
-echo "  → NETWORK_DIAGNOSTIC_GUIDE.md (detailed)"
+echo "  -> INTEGRATION_SUMMARY.md      (quick start)"
+echo "  -> NETWORK_DIAGNOSTIC_GUIDE.md (detailed)"
 echo ""
-echo "🚀 Next steps:"
+echo " Next steps:"
 echo "  1. chmod +x compile.sh scripts/*"
 echo "  2. oarsub -I -l nodes=2,walltime=0:30"
 echo "  3. ./start.sh"

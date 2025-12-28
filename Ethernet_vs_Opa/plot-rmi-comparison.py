@@ -63,7 +63,7 @@ def plot_rmi_comparison():
     plt.yscale('log')
     plt.tight_layout()
     plt.savefig('comparison-rmi-baseline-vs-optimized-throughput.png', dpi=300, bbox_inches='tight')
-    print('✓ comparison-rmi-baseline-vs-optimized-throughput.png created')
+    print('[OK] comparison-rmi-baseline-vs-optimized-throughput.png created')
     plt.close()
     
     # Graph 2: Improvement %
@@ -85,7 +85,7 @@ def plot_rmi_comparison():
     plt.grid(True, alpha=0.3, axis='y')
     plt.tight_layout()
     plt.savefig('comparison-rmi-optimization-improvement.png', dpi=300, bbox_inches='tight')
-    print('✓ comparison-rmi-optimization-improvement.png created')
+    print('[OK] comparison-rmi-optimization-improvement.png created')
     plt.close()
     
     # Summary
@@ -106,11 +106,11 @@ def plot_rmi_comparison():
     print("="*80)
     
     if overall > 15:
-        print(f"🚀 VERDICT: RMI Optimizations provide {overall:.1f}% improvement - HIGHLY RECOMMENDED")
+        print(f" VERDICT: RMI Optimizations provide {overall:.1f}% improvement - HIGHLY RECOMMENDED")
     elif overall > 0:
         print(f"⚠ VERDICT: Mixed results ({overall:.1f}%) - Use message-size-aware strategy")
     else:
-        print(f"❌ VERDICT: Optimizations not effective ({overall:.1f}%)")
+        print(f"[ERROR] VERDICT: Optimizations not effective ({overall:.1f}%)")
     
     print("="*80)
     

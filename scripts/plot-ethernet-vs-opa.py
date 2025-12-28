@@ -54,7 +54,7 @@ def plot_comparison():
         plt.xscale('log')
         plt.tight_layout()
         plt.savefig('comparison-ethernet-vs-opa-rtt.png', dpi=300, bbox_inches='tight')
-        print('✓ comparison-ethernet-vs-opa-rtt.png created')
+        print('[OK] comparison-ethernet-vs-opa-rtt.png created')
         plt.close()
         
         # GRAPH 2: Throughput Comparison
@@ -83,7 +83,7 @@ def plot_comparison():
         plt.xscale('log')
         plt.tight_layout()
         plt.savefig('comparison-ethernet-vs-opa-throughput.png', dpi=300, bbox_inches='tight')
-        print('✓ comparison-ethernet-vs-opa-throughput.png created')
+        print('[OK] comparison-ethernet-vs-opa-throughput.png created')
         plt.close()
         
         # Print summary

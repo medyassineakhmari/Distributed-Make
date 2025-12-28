@@ -167,7 +167,7 @@ public class Master_Baseline {
                     m.p25Lat, m.medianLat, m.p75Lat,
                     m.gcCount, m.gcTimeMs);
             }
-            System.out.println("\n✓ Results saved: " + filename);
+            System.out.println("\n[OK] Results saved: " + filename);
         }
     }
 
