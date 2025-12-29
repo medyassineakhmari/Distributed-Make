@@ -286,6 +286,114 @@ On observe que :
 
 Globalement, la figure met en évidence une corrélation : les sites avec la meilleure latence sont aussi ceux qui offrent le meilleur débit, tandis que les sites plus lents en latence sont également plus limités en bande passante effective.
 
+
+** Amélioration de la robustesse des mesures
+   -> COMMIT: 0205f6530d8c217e341b68a0edf35f9dadb4a905  -> DATE: December 2, 2025 at 12:51 AM
+
+Pour améliorer la fiabilité de nos mesures de latence, nous avons apporté deux modifications importantes à la méthodologie de collecte des données.
+
+*** Augmentation du nombre de mesures par taille
+
+Nous avons augmenté le nombre de mesures de RTT de 9 à 30 pour chaque taille de message. Cette modification vise à :
+
+- réduire l'impact des valeurs aberrantes causées par des événements sporadiques (pauses GC, interruptions système, contentions réseau momentanées) ;
+- obtenir une médiane plus représentative du comportement typique du système ;
+- améliorer la reproductibilité des résultats entre différentes exécutions.
+
+Avec seulement 9 mesures, la médiane (5ème valeur) peut être fortement influencée par quelques événements ponctuels. Avec 30 mesures, la médiane (15ème valeur) reflète davantage le comportement central du système en filtrant mieux les variations extrêmes.
+
+Cette approche s'apparente à une enquête statistique : plus l'échantillon est grand, plus la moyenne ou la médiane est fiable et représentative de la population.
+
+*** Modification du calcul de la baseline RTT
+
+La baseline RTT, qui représente la latence incompressible du système (réseau + RMI + traitement minimal), était initialement calculée comme le *minimum* des 30 mesures d'échauffement. Nous avons remplacé cette approche par une *moyenne* des 30 mesures.
+
+Justification du changement :
+
+- Le minimum peut représenter un cas exceptionnellement favorable (buffers vides, aucune contention, scheduler favorable) qui n'est pas représentatif des conditions réelles d'exécution.
+- La moyenne fournit une estimation plus réaliste de la latence de base observée en pratique, en incluant les micro-variations inhérentes au système.
+- Cette baseline plus réaliste permet un calcul du débit effectif plus précis, car elle reflète mieux les conditions moyennes d'utilisation.
+
+En termes de calcul du débit, cette modification évite de surestimer les performances en se basant sur un cas idéal qui ne se reproduit que rarement. C'est comparable à l'estimation du temps de trajet d'un livreur : utiliser le temps minimum observé une seule fois donnerait des prévisions irréalistes, alors que la moyenne des temps observés fournit une estimation plus fiable pour la planification.
+
+** Analyse détaillée des résultats : Normal vs I/O
+   -> COMMIT: 02783155e81b6e4285fa97cc8c1b810aa3d7222f  -> DATE: December 2, 2025 at 1:00 AM
+
+Les graphiques de comparaison entre Ping Pong Normal et Ping Pong I/O révèlent plusieurs comportements distincts selon la taille des messages.
+
+*** Observations principales
+
+#+CAPTION: Comparaison de la latence entre Ping Pong Normal et Ping Pong I/O.
+[[file:scripts/insights/PingPong/Mono-Site/Latence/comparison_rtt_v2.png]]
+
+#+CAPTION: Comparaison du débit entre Ping Pong Normal et Ping Pong I/O.
+[[file:scripts/insights/PingPong/Mono-Site/Débit/comparison_throughput_v2.png]]
+
+**** Zone 5-20 KB : Supériorité de Ping Pong I/O
+
+Dans cette plage, Ping Pong I/O présente un débit supérieur à Ping Pong Normal, contrairement à ce que l'on pourrait attendre intuitivement. Cette observation s'explique par l'optimisation des streams I/O Java pour les petits blocs de données :
+
+- Les ~BufferedInputStream/OutputStream~ utilisent un buffering multi-niveaux (typiquement 8 KB par défaut) qui découpe automatiquement les données en chunks optimaux pour la transmission TCP.
+- Ce découpage réduit le nombre de copies mémoire nécessaires et permet un envoi plus fluide des paquets réseau.
+- Le streaming permet un traitement pipeline : pendant que le premier chunk est transmis, le second peut être préparé en parallèle.
+
+Pour Ping Pong Normal, l'envoi d'un tableau de 10 KB en un seul bloc peut nécessiter une attente si le buffer socket n'est pas immédiatement disponible, alors que les streams I/O fragmentent naturellement l'envoi en plusieurs opérations plus petites et mieux tolérées par la pile réseau.
+
+**** Zone 50 KB - 2 MB : Convergence et croissance
+
+Au-delà de 50 KB, les deux modes convergent (différence inférieure à 5%). À ces tailles, le temps de transfert réseau domine largement l'overhead de sérialisation ou de buffering. Les optimisations des streams I/O deviennent négligeables face aux centaines de millisecondes nécessaires pour transmettre les données sur le réseau.
+
+Le débit continue de croître jusqu'à atteindre un pic optimal autour de 1-2 MB, où le système trouve son meilleur équilibre entre :
+
+- des buffers efficacement remplis mais non saturés,
+- une fenêtre TCP maximale sans déclenchement du contrôle de congestion,
+- un overhead de fragmentation acceptable,
+- un impact minimal du garbage collector Java.
+
+**** Zone > 2 MB : Baisse de performance
+
+Pour les gros transferts supérieurs à 2 MB, on observe une diminution progressive du débit pour les deux modes. Ce phénomène s'explique par plusieurs facteurs cumulatifs :
+
+*Saturation des buffers* : Les buffers à différents niveaux du système (buffers socket du noyau, buffers des cartes réseau, queues des switches) ont des capacités limitées et peuvent saturer lors de transferts massifs. Lorsqu'un buffer est plein et que de nouveaux paquets arrivent, ceux-ci sont abandonnés, créant des pertes de paquets. 
+
+*Contrôle de congestion TCP* : Pour les gros transferts, le protocole TCP détecte des pertes de paquets, même minimes, ce qui déclenche son mécanisme de contrôle de congestion. En réponse à ces pertes, TCP réduit sa fenêtre de congestion et repasse en mode "slow start", ralentissant progressivement le débit d'envoi. Ce comportement est une caractéristique fondamentale de TCP conçue pour éviter la congestion du réseau. Ainsi, le débit effectif diminue car TCP devient plus conservateur dans sa vitesse de transmission, sacrifiant la performance pour garantir la fiabilité et éviter de surcharger le réseau.
+
+*Fragmentation accrue* : Un message de 10 MB nécessite environ 6827 paquets. Chaque paquet ajoute un overhead TCP/IP de 40 bytes, soit un total de 273 KB d'overhead (~2,6% du volume total), ce qui réduit le débit effectif.
+
+*Garbage Collection Java* : Les gros transferts provoquent des allocations mémoire importantes et la génération d'objets temporaires lors de la sérialisation. Le garbage collector se déclenche alors pendant le transfert, créant des pauses de 5 à 50 millisecondes qui impactent directement le débit mesuré.
+
+*Réseau partagé* : Sur Grid'5000, le réseau est partagé entre plusieurs utilisateurs. Le trafic concurrent (transferts NFS, connexions SSH, services de monitoring) crée des micro-congestions temporaires qui affectent particulièrement les gros transferts, plus sensibles aux variations de bande passante disponible.
+
+** Consolidation Méthodologique
+   -> COMMIT: 8ab23e9ae3d357605b811c17c73638a12b21879b  -> DATE: December 23, 2025 at 5:10 PM
+
+#+CAPTION: Comparaison de la latence entre Ping Pong Normal et Ping Pong I/O (v3).
+[[file:scripts/insights/PingPong/Mono-Site/Latence/comparison_rtt_v3.png]]
+
+#+CAPTION: Comparaison du débit entre Ping Pong Normal et Ping Pong I/O (v3).
+[[file:scripts/insights/PingPong/Mono-Site/Débit/comparison_throughput_v3.png]]
+
+Afin d'affiner la précision de nos mesures et d'éliminer les artefacts liés à la variabilité du système, nous avons révisé notre protocole de mesure sur deux axes majeurs : le modèle de calcul et l'approche statistique.
+
+*** Correction du Modèle de Calcul du Débit
+
+Dans nos premières itérations, le débit était calculé en soustrayant une latence à vide (/baseline/) au temps de transfert total ($T_{transfert} = T_{total} - T_{baseline}$). Cette approche s'est révélée instable pour les fichiers de très petite taille (1 à 5 KB). En effet, lorsque $T_{total}$ est très proche de $T_{baseline}$ (ce qui arrive fréquemment en raison de la gigue système), la soustraction produit une valeur proche de zéro, engendrant des débits artificiellement infinis lors de la division.
+
+*Correction :* Nous avons adopté le calcul du *Débit Effectif* (/Effective Throughput/).
+
+$Débit = TailleFichier / RTT_{Total}$
+
+
+Cette métrique est plus rigoureuse car elle reflète la performance réelle perçue par l'utilisateur final. Elle englobe l'intégralité de la chaîne de traitement : le temps de sérialisation, la traversée de la pile réseau et la désérialisation, éliminant ainsi les aberrations mathématiques sur les petites charges utiles.
+
+*** Analyse Statistique Robuste (Médiane et IQR)
+
+Les analyses basées sur la moyenne arithmétique et l'étendue (Min/Max) se sont montrées trop sensibles aux valeurs aberrantes (/outliers/). Ces valeurs extrêmes sont souvent causées par des micro-pauses du système d'exploitation ou des contentions réseau ponctuelles, et ne reflètent pas la performance nominale du système.
+
+- *Adoption de la Médiane :* Nous utilisons désormais la médiane comme mesure de tendance centrale. Contrairement à la moyenne, la médiane n'est pas "tirée" vers le haut ou le bas par une unique mesure extrême, offrant une vision plus représentative du comportement typique.
+
+- *Intervalle Interquartile (IQR) :* Pour représenter la variabilité (barres d'erreur), nous avons remplacé l'étendue (Min-Max) par l'Intervalle Interquartile ($Q3 - Q1$). Cela permet de visualiser la dispersion des 50% de données centrales. Cette méthode filtre efficacement le bruit statistique et offre une représentation beaucoup plus fidèle de la stabilité réelle du système.
+
 * Optimisation RMI pour améliorer les performances
   -> COMMIT: 4900ec4  -> DATE: December 22, 2025
 
