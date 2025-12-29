@@ -25,4 +25,4 @@ for node in $(cat $OAR_NODE_FILE | uniq); do
         ssh $node "pkill -9 -f Worker" 2>/dev/null || true
     fi
 done
-echo "✓ Workers stopped"
+echo "[OK] Workers stopped"

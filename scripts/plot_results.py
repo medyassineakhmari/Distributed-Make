@@ -53,8 +53,8 @@ def plot_single_site():
     plt.xscale('log')
     plt.yscale('log') # Log scale souvent utile pour la latence
     plt.tight_layout()
-    plt.savefig('comparison_rtt.png', dpi=300, bbox_inches='tight')
-    print('✓ comparison_rtt.png created')
+    plt.savefig('comparison_rtt.png', dpi=300)
+    print('[OK] comparison_rtt.png created')
     
     # ========================================
     # GRAPHE 2: Throughput (Débit) - Médiane & IQR
@@ -94,8 +94,8 @@ def plot_single_site():
     plt.grid(True, alpha=0.3, linestyle='--')
     plt.xscale('log')
     plt.tight_layout()
-    plt.savefig('comparison_throughput.png', dpi=300, bbox_inches='tight')
-    print('✓ comparison_throughput.png created')
+    plt.savefig('comparison_throughput.png', dpi=300)
+    print('[OK] comparison_throughput.png created')
 
     # Note: J'ai retiré le graphe de variation détaillé car les colonnes min/max 
     # ne sont plus présentes dans le nouveau CSV Java optimisé.
@@ -135,7 +135,7 @@ def plot_sites_comparison():
     
     plt.tight_layout()
     plt.savefig('sites_comparison.png', dpi=300, bbox_inches='tight')
-    print('✓ sites_comparison.png created')
+    print('[OK] sites_comparison.png created')
 
 if __name__ == '__main__':
     mode = sys.argv[1] if len(sys.argv) > 1 else 'single'

@@ -53,7 +53,7 @@ for SITE in "${SITES[@]}"; do
         tail -n +2 /tmp/site-$SITE.csv >> sites-comparison.csv
     fi
     
-    echo "✓ Site $SITE completed"
+    echo "[OK] Site $SITE completed"
     echo ""
 done
 
@@ -65,6 +65,6 @@ echo "Generating comparison plot..."
 python3 scripts/plot_results.py sites
 
 echo ""
-echo "✓ Multi-sites test completed!"
+echo "[OK] Multi-sites test completed!"
 echo "Results: sites-comparison.csv"
 echo "Plot: sites_comparison.png"

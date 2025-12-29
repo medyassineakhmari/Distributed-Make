@@ -8,6 +8,12 @@ echo ""
 
 cd ~/pingpong
 
+# ========== Network Diagnostic ==========
+echo "Running network diagnostic before tests..."
+bash scripts/network-diagnostic.sh > ~/pingpong/network-diagnostic-before-tests.txt 2>&1 || true
+echo "Diagnostic saved to ~/pingpong/network-diagnostic-before-tests.txt"
+echo ""
+
 # Compiler
 bash compile.sh
 echo ""
@@ -39,9 +45,10 @@ for node in $(cat $OAR_NODE_FILE | uniq); do
     fi
 done
 
-echo "✓ Test completed!"
+echo "[OK] Test completed!"
 echo "Results:"
 echo "  - pingpong-normal.csv"
 echo "  - pingpong-io.csv"
 echo "  - comparison_rtt.png"
 echo "  - comparison_throughput.png"
+echo "  - network-diagnostic-report.txt"

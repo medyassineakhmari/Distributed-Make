@@ -1,10 +1,9 @@
-import java.rmi.registry.*;
 import java.io.*;
-import java.util.*;
-import java.nio.ByteBuffer;
 import java.lang.management.*;
+import java.rmi.registry.*;
+import java.util.*;
 
-public class Master {
+public class Master_Baseline {
     
     // Tailles testées (avec les nouvelles valeurs intermédiaires)
     private static final int[] SIZES_KB = {
@@ -51,11 +50,8 @@ public class Master {
     
     public static void main(String[] args) {
         try {
-            //  Optimisations RMI pour meilleur débit
-            System.setProperty("sun.rmi.transport.tcp.directByteBufferPool", "true");
-            System.setProperty("sun.rmi.serialization.useProxyClass", "false");
-            System.setProperty("sun.rmi.transport.tcp.responseTimeout", "10000");
-            System.setProperty("sun.rmi.transport.tcp.readTimeout", "10000");
+            // BASELINE: No RMI optimizations
+            // (removing 4 JVM properties for baseline comparison)
             List<String> workers = getWorkerHosts();
             System.out.println("Testing " + workers.size() + " workers");
             
@@ -73,13 +69,15 @@ public class Master {
                 
                 // --- TESTS ---
                 for (int sizeKB : SIZES_KB) {
-                    System.out.printf("\n--- Testing size: %d KB (%.2f MB) ---\n", sizeKB, sizeKB/1024.0);
-                    
                     byte[] data = new byte[sizeKB * 1024];
                     
                     // 1. Stabilisation GC & Warmup Spécifique
                     System.gc();
-                    try { Thread.sleep(200); } catch (Exception e) {}
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                     
                     for (int w = 0; w < 10; w++) service.ping(data); // Warmup JIT
 
@@ -94,8 +92,7 @@ public class Master {
                         long start = System.nanoTime();
                         service.ping(data);
                         long end = System.nanoTime();
-                        
-                        double rttMs = (end - start) / 1_000_000.0;
+                        double rttMs = (end - start) / 1_000_000.0;   // en ms
                         latencies[rep] = rttMs;
                         
                         // Calcul Débit Effectif (Taille / RTT Total)
@@ -105,8 +102,9 @@ public class Master {
                             throughputs[rep] = 0;
                         }
                         
-                        System.out.printf("  [%2d] Lat: %8.3f ms | Thr: %10.4f MB/s\n", rep+1, rttMs, throughputs[rep]);
+                        if (rep < 3) System.out.println("  [" + (rep+1) + "] latency: " + rttMs + " ms");
                     }
+                    System.out.println("... (reps 4-30 omitted for clarity)");
                     
                     long gcTimeAfter = getGCTime();
                     
@@ -114,17 +112,18 @@ public class Master {
                     Arrays.sort(latencies);
                     Arrays.sort(throughputs);
                     
-                    // Indices pour 30 valeurs : Q1=7, Median=15, Q3=22
+                    // Indices pour 30 valeurs : Q1=7.5, Median=14.5, Q3=22.5
+                    // For 30 values, median is average of elements at indices 14 and 15
                     double p25Latency = latencies[7];
-                    double medianLatency = latencies[15];
+                    double medianLatency = (latencies[14] + latencies[15]) / 2.0;
                     double p75Latency = latencies[22];
                     
                     double p25Throughput = throughputs[7];
-                    double medianThroughput = throughputs[15];
+                    double medianThroughput = (throughputs[14] + throughputs[15]) / 2.0;
                     double p75Throughput = throughputs[22];
                     
-                    System.out.printf("  => Median Thr: %.2f MB/s (IQR: %.2f - %.2f)\n", 
-                        medianThroughput, p25Throughput, p75Throughput);
+                    System.out.printf("  => Median Lat: %.3f ms | Median Thr: %.2f MB/s (IQR: %.2f - %.2f)\n", 
+                        medianLatency, medianThroughput, p25Throughput, p75Throughput);
                     
                     results.add(new DetailedMetric(
                         host, sizeKB, 
@@ -136,7 +135,9 @@ public class Master {
             }
             saveResults(results, "pingpong-normal.csv");
             
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     private static class DetailedMetric {
@@ -154,20 +155,20 @@ public class Master {
     }
     
     private static void saveResults(List<DetailedMetric> results, String filename) throws Exception {
-        PrintWriter writer = new PrintWriter(filename);
-        // NOUVEL EN-TÊTE CSV
-        writer.println("host,size_kb,p25_throughput_mbps,median_throughput_mbps,p75_throughput_mbps," +
-                      "p25_latency_ms,median_latency_ms,p75_latency_ms,gc_count,gc_time_ms");
-        
-        for (DetailedMetric m : results) {
-            writer.printf(Locale.US, "%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%d\n",
-                m.host, m.sizeKB, 
-                m.p25Thr, m.medianThr, m.p75Thr,
-                m.p25Lat, m.medianLat, m.p75Lat,
-                m.gcCount, m.gcTimeMs);
+        try (PrintWriter writer = new PrintWriter(filename)) {
+            // NOUVEL EN-TÊTE CSV
+            writer.println("host,size_kb,p25_throughput_mbps,median_throughput_mbps,p75_throughput_mbps," +
+                          "p25_latency_ms,median_latency_ms,p75_latency_ms,gc_count,gc_time_ms");
+            
+            for (DetailedMetric m : results) {
+                writer.printf(Locale.US, "%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%d\n",
+                    m.host, m.sizeKB, 
+                    m.p25Thr, m.medianThr, m.p75Thr,
+                    m.p25Lat, m.medianLat, m.p75Lat,
+                    m.gcCount, m.gcTimeMs);
+            }
+            System.out.println("\n[OK] Results saved: " + filename);
         }
-        writer.close();
-        System.out.println("\n✓ Results saved: " + filename);
     }
 
     private static List<String> getWorkerHosts() throws Exception {
@@ -175,13 +176,13 @@ public class Master {
         if (nodeFile == null) return Arrays.asList("localhost");
         String masterHost = java.net.InetAddress.getLocalHost().getHostName();
         Set<String> hosts = new HashSet<>();
-        BufferedReader reader = new BufferedReader(new FileReader(nodeFile));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            String host = line.trim();
-            if (!host.equals(masterHost)) hosts.add(host);
+        try (BufferedReader reader = new BufferedReader(new FileReader(nodeFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String host = line.trim();
+                if (!host.equals(masterHost)) hosts.add(host);
+            }
         }
-        reader.close();
         return new ArrayList<>(hosts);
     }
 }
