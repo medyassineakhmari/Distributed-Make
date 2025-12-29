@@ -364,3 +364,33 @@ Pour les gros transferts supérieurs à 2 MB, on observe une diminution progress
 
 *Réseau partagé* : Sur Grid'5000, le réseau est partagé entre plusieurs utilisateurs. Le trafic concurrent (transferts NFS, connexions SSH, services de monitoring) crée des micro-congestions temporaires qui affectent particulièrement les gros transferts, plus sensibles aux variations de bande passante disponible.
 
+
+** Consolidation Méthodologique
+   -> COMMIT: 8ab23e9ae3d357605b811c17c73638a12b21879b  -> DATE: December 23, 2025 at 5:10 PM
+
+#+CAPTION: Comparaison de la latence entre Ping Pong Normal et Ping Pong I/O (v3).
+[[file:scripts/insights/PingPong/Mono-Site/Latence/comparison_rtt_v3.png]]
+
+#+CAPTION: Comparaison du débit entre Ping Pong Normal et Ping Pong I/O (v3).
+[[file:scripts/insights/PingPong/Mono-Site/Débit/comparison_throughput_v3.png]]
+
+Afin d'affiner la précision de nos mesures et d'éliminer les artefacts liés à la variabilité du système, nous avons révisé notre protocole de mesure sur deux axes majeurs : le modèle de calcul et l'approche statistique.
+
+*** Correction du Modèle de Calcul du Débit
+
+Dans nos premières itérations, le débit était calculé en soustrayant une latence à vide (/baseline/) au temps de transfert total ($T_{transfert} = T_{total} - T_{baseline}$). Cette approche s'est révélée instable pour les fichiers de très petite taille (1 à 5 KB). En effet, lorsque $T_{total}$ est très proche de $T_{baseline}$ (ce qui arrive fréquemment en raison de la gigue système), la soustraction produit une valeur proche de zéro, engendrant des débits artificiellement infinis lors de la division.
+
+*Correction :* Nous avons adopté le calcul du *Débit Effectif* (/Effective Throughput/).
+
+$Débit = TailleFichier / RTT_{Total}$
+
+
+Cette métrique est plus rigoureuse car elle reflète la performance réelle perçue par l'utilisateur final. Elle englobe l'intégralité de la chaîne de traitement : le temps de sérialisation, la traversée de la pile réseau et la désérialisation, éliminant ainsi les aberrations mathématiques sur les petites charges utiles.
+
+*** Analyse Statistique Robuste (Médiane et IQR)
+
+Les analyses basées sur la moyenne arithmétique et l'étendue (Min/Max) se sont montrées trop sensibles aux valeurs aberrantes (/outliers/). Ces valeurs extrêmes sont souvent causées par des micro-pauses du système d'exploitation ou des contentions réseau ponctuelles, et ne reflètent pas la performance nominale du système.
+
+- *Adoption de la Médiane :* Nous utilisons désormais la médiane comme mesure de tendance centrale. Contrairement à la moyenne, la médiane n'est pas "tirée" vers le haut ou le bas par une unique mesure extrême, offrant une vision plus représentative du comportement typique.
+
+- *Intervalle Interquartile (IQR) :* Pour représenter la variabilité (barres d'erreur), nous avons remplacé l'étendue (Min-Max) par l'Intervalle Interquartile ($Q3 - Q1$). Cela permet de visualiser la dispersion des 50% de données centrales. Cette méthode filtre efficacement le bruit statistique et offre une représentation beaucoup plus fidèle de la stabilité réelle du système.
