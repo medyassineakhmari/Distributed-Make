@@ -364,6 +364,7 @@ Pour les gros transferts supérieurs à 2 MB, on observe une diminution progress
 
 *Réseau partagé* : Sur Grid'5000, le réseau est partagé entre plusieurs utilisateurs. Le trafic concurrent (transferts NFS, connexions SSH, services de monitoring) crée des micro-congestions temporaires qui affectent particulièrement les gros transferts, plus sensibles aux variations de bande passante disponible.
 
+
 ** Consolidation Méthodologique
    -> COMMIT: 8ab23e9ae3d357605b811c17c73638a12b21879b  -> DATE: December 23, 2025 at 5:10 PM
 

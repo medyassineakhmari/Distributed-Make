@@ -2,132 +2,157 @@ import java.rmi.registry.*;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
+import java.lang.management.*;
 
 public class MasterIO {
     
-    private static final int[] SIZES_KB = {1, 2, 5, 10, 20, 50, 100, 200, 500, 1024, 2048, 5120, 10240};
+    // Mêmes tailles que Master.java
+    private static final int[] SIZES_KB = {
+        1, 2, 5, 10, 20, 50, 100, 200, 500,
+        1024,      // 1 MB
+        // 2048,      // 2 MB
+        3072,      // 3 MB
+        5120,      // 5 MB
+        8192 ,      // 8 MB
+        10240,     // 10 MB
+        20480,     // 20 MB
+        30720,     // 30 MB
+        40960,     // 40 MB
+        51200,     // 50 MB
+        61440,     // 60 MB
+        71680,     // 70 MB
+        81920,    // 80 MB
+        92160,    // 90 MB
+        102400,    // 100 MB
+        307200,    // 300 MB
+        512000,    // 500 MB
+        1048576   // 1 GB
+    };
+    
     private static final String TEMP_DIR = "/tmp/pingpong-test/";
+    
+    private static final List<GarbageCollectorMXBean> gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
+    private static long getGCTime() {
+        long total = 0; for(GarbageCollectorMXBean b : gcBeans) total += b.getCollectionTime(); return total;
+    }
+    private static long getGCCount() {
+        long total = 0; for(GarbageCollectorMXBean b : gcBeans) total += b.getCollectionCount(); return total;
+    }
     
     public static void main(String[] args) {
         try {
             Files.createDirectories(Paths.get(TEMP_DIR));
-            
             List<String> workers = getWorkerHosts();
             System.out.println("Testing " + workers.size() + " workers (WITH I/O)");
             
-            List<Metric> results = new ArrayList<>();
+            List<DetailedMetric> results = new ArrayList<>();
             
             for (String host : workers) {
                 System.out.println("\n=== Testing: " + host + " (I/O) ===");
-                
                 Registry registry = LocateRegistry.getRegistry(host, 1099);
                 PingPongService service = (PingPongService) registry.lookup("PingPong");
-                
                 System.out.println(service.hello());
                 
                 // Warmup
-                System.out.println("Warming up...");
-                double baselineRTT = 0;
-                for (int i = 0; i < 30; i++) {
-                    long start = System.nanoTime();
-                    service.ping(new byte[]{1});
-                    long end = System.nanoTime();
-                    baselineRTT += (end - start) / 1_000_000.0;
-                }
-                baselineRTT /= 30.0;
-                System.out.printf("Baseline RTT: %.3f ms\n", baselineRTT);
-                
-                // Créer fichiers de test sur le worker
-                System.out.println("Creating test files on worker...");
+                System.out.println("Global Warming up...");
+                for (int i = 0; i < 5; i++) service.ping(new byte[]{1});
+
+                // Préparation fichiers distants
+                System.out.println("Creating test files...");
                 for (int sizeKB : SIZES_KB) {
-                    String remotePath = TEMP_DIR + "test_" + sizeKB + "KB.txt";
-                    service.createTestFile(remotePath, sizeKB);
+                    service.createTestFile(TEMP_DIR + "test_" + sizeKB + "KB.txt", sizeKB);
                 }
-                System.out.println();
-                
-                // Tests avec I/O
+
+                // --- TESTS ---
                 for (int sizeKB : SIZES_KB) {
+                    System.out.printf("\n--- Testing size: %d KB (%.2f MB) with I/O ---\n", sizeKB, sizeKB/1024.0);
+                    
                     String localPath = TEMP_DIR + "local_" + sizeKB + "KB.txt";
                     String remotePath = TEMP_DIR + "test_" + sizeKB + "KB.txt";
                     
-                    // Créer fichier local
                     byte[] data = new byte[sizeKB * 1024];
                     Arrays.fill(data, (byte) 'a');
                     Files.write(Paths.get(localPath), data);
                     
-                    // Répéter 30 fois
-                    double[] times = new double[30];
+                    long gcTimeBefore = getGCTime();
+                    long gcCountBefore = getGCCount();
+                    
+                    double[] latencies = new double[30];
+                    double[] throughputs = new double[30];
+                    
                     for (int rep = 0; rep < 30; rep++) {
                         long start = System.nanoTime();
                         
-                        // LECTURE locale
                         byte[] fileData = Files.readAllBytes(Paths.get(localPath));
-                        
-                        // ENVOI RMI
                         service.pingWithIO(remotePath);
-                        
-                        // ÉCRITURE locale
-                        String outPath = TEMP_DIR + "received_" + sizeKB + "KB.txt";
-                        Files.write(Paths.get(outPath), fileData);
+                        Files.write(Paths.get(TEMP_DIR + "received_" + sizeKB + "KB.txt"), fileData);
                         
                         long end = System.nanoTime();
-                        times[rep] = (end - start) / 1_000_000.0;
-                    }
-                    Arrays.sort(times);
-                    double rttMs = times[15]; // Médiane
-                    
-                    double throughputMBps = 0;
-                    if (sizeKB > 1) {
-                        double transferTimeS = (rttMs - baselineRTT) / 1000.0;
-                        if (transferTimeS > 0) {
-                            throughputMBps = (sizeKB / 1024.0) / transferTimeS;
-                        }
+                        double rttMs = (end - start) / 1_000_000.0;
+                        latencies[rep] = rttMs;
+                        
+                        if (rttMs > 0) throughputs[rep] = (sizeKB / 1024.0) / (rttMs / 1000.0);
+                        else throughputs[rep] = 0;
+                        
+                        System.out.printf("  [%2d] Lat: %8.3f ms | Thr: %10.4f MB/s\n", rep+1, rttMs, throughputs[rep]);
                     }
                     
-                    Metric m = new Metric(host, sizeKB, rttMs, throughputMBps, "io");
-                    results.add(m);
+                    long gcTimeAfter = getGCTime();
                     
-                    System.out.printf("Size: %5d KB | RTT: %8.3f ms | Throughput: %10.3f MB/s\n",
-                            sizeKB, rttMs, throughputMBps);
+                    // STATS
+                    Arrays.sort(latencies);
+                    Arrays.sort(throughputs);
+                    
+                    results.add(new DetailedMetric(
+                        host, sizeKB, 
+                        throughputs[7], throughputs[15], throughputs[22], // Q1, Med, Q3
+                        latencies[7], latencies[15], latencies[22],       // Q1, Med, Q3
+                        getGCCount() - gcCountBefore, gcTimeAfter - gcTimeBefore
+                    ));
                 }
             }
-            
             saveResults(results, "pingpong-io.csv");
             
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+    
+    // Mêmes classes internes DetailedMetric et saveResults que Master.java ...
+    private static class DetailedMetric {
+        String host; int sizeKB;
+        double p25Thr, medianThr, p75Thr, p25Lat, medianLat, p75Lat;
+        long gcCount, gcTimeMs;
+        public DetailedMetric(String h, int s, double p25T, double medT, double p75T, double p25L, double medL, double p75L, long gcC, long gcTm) {
+            this.host = h; this.sizeKB = s;
+            this.p25Thr = p25T; this.medianThr = medT; this.p75Thr = p75T;
+            this.p25Lat = p25L; this.medianLat = medL; this.p75Lat = p75L;
+            this.gcCount = gcC; this.gcTimeMs = gcTm;
         }
     }
     
+    private static void saveResults(List<DetailedMetric> results, String filename) throws Exception {
+        PrintWriter writer = new PrintWriter(filename);
+        writer.println("host,size_kb,p25_throughput_mbps,median_throughput_mbps,p75_throughput_mbps," +
+                      "p25_latency_ms,median_latency_ms,p75_latency_ms,gc_count,gc_time_ms");
+        for (DetailedMetric m : results) {
+            writer.printf(Locale.US, "%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%d\n",
+                m.host, m.sizeKB, m.p25Thr, m.medianThr, m.p75Thr, m.p25Lat, m.medianLat, m.p75Lat, m.gcCount, m.gcTimeMs);
+        }
+        writer.close();
+        System.out.println("\n✓ Results saved: " + filename);
+    }
+
     private static List<String> getWorkerHosts() throws Exception {
         String nodeFile = System.getenv("OAR_NODE_FILE");
-        if (nodeFile == null) {
-            return Arrays.asList("localhost");
-        }
-        
+        if (nodeFile == null) return Arrays.asList("localhost");
         String masterHost = java.net.InetAddress.getLocalHost().getHostName();
         Set<String> hosts = new HashSet<>();
-        
         BufferedReader reader = new BufferedReader(new FileReader(nodeFile));
         String line;
         while ((line = reader.readLine()) != null) {
             String host = line.trim();
-            if (!host.equals(masterHost)) {
-                hosts.add(host);
-            }
+            if (!host.equals(masterHost)) hosts.add(host);
         }
         reader.close();
-        
         return new ArrayList<>(hosts);
-    }
-    
-    private static void saveResults(List<Metric> results, String filename) throws Exception {
-        PrintWriter writer = new PrintWriter(filename);
-        writer.println("host,size_kb,rtt_ms,throughput_mbps,type");
-        for (Metric m : results) {
-            writer.println(m);
-        }
-        writer.close();
-        System.out.println("\nResults saved: " + filename);
     }
 }
