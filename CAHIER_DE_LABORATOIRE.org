@@ -396,7 +396,7 @@ Les analyses basées sur la moyenne arithmétique et l'étendue (Min/Max) se son
 - *Intervalle Interquartile (IQR) :* Pour représenter la variabilité (barres d'erreur), nous avons remplacé l'étendue (Min-Max) par l'Intervalle Interquartile ($Q3 - Q1$). Cela permet de visualiser la dispersion des 50% de données centrales. Cette méthode filtre efficacement le bruit statistique et offre une représentation beaucoup plus fidèle de la stabilité réelle du système.
 
 * Optimisation RMI pour améliorer les performances
-  -> COMMIT: 4900ec4  -> DATE: December 22, 2025
+  -> COMMIT: 4900ec400da62b07c5549730005b343126010d4d  -> DATE: December 22, 2025 at 2:35 PM
 
 ** Problématique initiale
 
@@ -418,7 +418,7 @@ Pour contourner ces limitations, nous avons appliqué les optimisations suivante
 -Dsun.rmi.transport.tcp.directByteBufferPool=true
 #+END_SRC
 
-**Bénéfice** : Utilise des buffers directs (off-heap) au lieu de allouer des buffers en mémoire JVM heap. Réduit la pression sur le garbage collector et les copies mémoire.
+*Bénéfice* : Utilise des buffers directs (off-heap) au lieu de allouer des buffers en mémoire JVM heap. Réduit la pression sur le garbage collector et les copies mémoire.
 
 *** 2. Désactivation de ProxyClass
 
@@ -426,7 +426,7 @@ Pour contourner ces limitations, nous avons appliqué les optimisations suivante
 -Dsun.rmi.serialization.useProxyClass=false
 #+END_SRC
 
-**Bénéfice** : Évite la sérialisation via proxy classes, ce qui réduit l'overhead de sérialisation pour les objets RMI.
+*Bénéfice* : Évite la sérialisation via proxy classes, ce qui réduit l'overhead de sérialisation pour les objets RMI.
 
 *** 3. Augmentation des timeouts RMI
 
@@ -435,7 +435,7 @@ Pour contourner ces limitations, nous avons appliqué les optimisations suivante
 -Dsun.rmi.transport.tcp.readTimeout=10000
 #+END_SRC
 
-**Bénéfice** : Augmente les délais d'attente à 10 secondes pour éviter les timeouts prématurés lors de transferts de gros messages sur réseau chargé.
+*Bénéfice* : Augmente les délais d'attente à 10 secondes pour éviter les timeouts prématurés lors de transferts de gros messages sur réseau chargé.
 
 ** Résultats de l'optimisation
 
@@ -447,18 +447,18 @@ Pour contourner ces limitations, nous avons appliqué les optimisations suivante
 
 Les résultats révèlent un pattern crucial :
 
-- **Petits messages (1-20 KB)** : amélioration **massive** (~100 % pour 1-2 KB). La sérialisation domine, et désactiver ProxyClass la réduit de moitié.
-- **Gros messages (> 100 KB)** : amélioration **négligeable** (< 1 %). Le transfert réseau domine, les optimisations logicielles ne peuvent rien y faire.
+- *Petits messages (1-20 KB)* : amélioration *massive* (~100 % pour 1-2 KB). La sérialisation domine, et désactiver ProxyClass la réduit de moitié.
+- *Gros messages (> 100 KB)* : amélioration *négligeable* (< 1 %). Le transfert réseau domine, les optimisations logicielles ne peuvent rien y faire.
 
 * Comparaison Ethernet vs OPA (Omni-Path)
-  -> COMMIT: 0388f6b  -> DATE: December 28, 2025
+  -> COMMIT: 0388f6bbae6538d318cf27566d2b6cbe7e6b92c8  -> DATE: December 28, 2025 at 4:58 PM
 
 ** Contexte : deux réseaux sur Grid5000
 
 Grid5000 Grenoble dispose de deux réseaux distincts :
 
-1. **Ethernet 10 Gbps** (~172.16.x.x~) : le réseau par défaut, utilisé pour les tâches générales.
-2. **Omni-Path 100 Gbps** (~172.18.x.x~) : un réseau haute performance dédié au calcul haute performance (HPC).
+1. *Ethernet 10 Gbps* (~172.16.x.x~) : le réseau par défaut, utilisé pour les tâches générales.
+2. *Omni-Path 100 Gbps* (~172.18.x.x~) : un réseau haute performance dédié au calcul haute performance (HPC).
 
 L'enjeu est de déterminer quel réseau offre les meilleures performances pour le PingPong et à quel prix.
 
@@ -481,7 +481,7 @@ Nous avons lancé les tests PingPong sur les deux réseaux :
 Avant optimisation :
 
 - *Ethernet 10 Gbps* : débit observé ~780 MB/s (proche du plafond théorique),
-- *OPA 100 Gbps* : débit atteint **~7800 MB/s**, soit environ **10x supérieur à Ethernet**.
+- *OPA 100 Gbps* : débit atteint *~7800 MB/s*, soit environ *10x supérieur à Ethernet*.
 
 Contrairement à ce qu'on aurait pu penser, l'OPA ne plafonnait donc PAS à 750 MB/s. C'est l'Ethernet qui était limité à ses 10 Gbps théoriques. L'OPA exploitait déjà bien la bande passante disponible.
 
@@ -496,37 +496,37 @@ Contrairement à ce qu'on aurait pu penser, l'OPA ne plafonnait donc PAS à 750 
 Après optimisation :
 
 - *Ethernet 10 Gbps* : débit augmente légèrement à ~790 MB/s (amélioration mineure de ~1-2 %),
-- *OPA 100 Gbps* : débit monte à **~7900 MB/s** (amélioration de ~1-2 %), soit toujours **10x plus rapide qu'Ethernet**.
+- *OPA 100 Gbps* : débit monte à *~7900 MB/s* (amélioration de ~1-2 %), soit toujours *10x plus rapide qu'Ethernet*.
 
-La différence reste prononcée : **OPA reste 10x plus rapide qu'Ethernet** même après optimisation. Les optimisations JVM offrent des améliorations marginales dans ce contexte car le réseau physique reste le facteur dominant.
+La différence reste prononcée : *OPA reste 10x plus rapide qu'Ethernet* même après optimisation. Les optimisations JVM offrent des améliorations marginales dans ce contexte car le réseau physique reste le facteur dominant.
 
 ** Conclusion : explications et recommandations
 
-1. **Deux régimes très distincts selon la taille du message** :
+1. *Deux régimes très distincts selon la taille du message* :
    
-   - **Petits messages (1-20 KB) : l'optimisation RMI est CRITIQUE** :
-     - À 1 KB : débit multiplié par **2** (baseline 1.95 MB/s → optimisé 3.89 MB/s, +100%)
-     - À 2 KB : débit multiplié par **2** (baseline 3.89 MB/s → optimisé 7.74 MB/s, +99%)
-     - À 10 KB : débit multiplié par **~2** (baseline 19.06 MB/s → optimisé 37.21 MB/s, +95%)
+   - *Petits messages (1-20 KB) : l'optimisation RMI est CRITIQUE* :
+     - À 1 KB : débit multiplié par *2* (baseline 1.95 MB/s → optimisé 3.89 MB/s, +100%)
+     - À 2 KB : débit multiplié par *2* (baseline 3.89 MB/s → optimisé 7.74 MB/s, +99%)
+     - À 10 KB : débit multiplié par *2* (baseline 19.06 MB/s → optimisé 37.21 MB/s, +95%)
      
      Pourquoi ? Sur ces tailles, l'overhead de *sérialisation* (proxy classes, buffers heap, GC) domine largement le temps de transfert réseau. En désactivant ProxyClass et activant DirectByteBufferPool, on divise littéralement ce coût par deux.
 
-   - **Gros messages (> 100 KB) : l'optimisation RMI est MARGINALE** :
+   - *Gros messages (> 100 KB) : l'optimisation RMI est MARGINALE* :
      - À 1 MB : débit quasi-inchangé (baseline 783.8 MB/s → optimisé 783.9 MB/s, +0.1%)
-     - Amélioration globale : **1-2 %** seulement
+     - Amélioration globale : *1-2 %* seulement
      
      Pourquoi ? Sur ces tailles, le temps de *transfert réseau* domine absolument. La sérialisation devient négligeable. Les optimisations JVM ne peuvent rien améliorer si le réseau est le bottleneck.
 
-2. **Choix du réseau (Ethernet vs OPA) domine pour les gros volumes** :
+2. *Choix du réseau (Ethernet vs OPA) domine pour les gros volumes* :
    
-   Le réseau OPA 100 Gbps fournit un débit ~10× supérieur à Ethernet 10 Gbps, indépendamment des optimisations RMI. C'est une **différence matérielle**, pas logicielle : OPA reste 10× plus rapide même après optimisation.
+   Le réseau OPA 100 Gbps fournit un débit ~10× supérieur à Ethernet 10 Gbps, indépendamment des optimisations RMI. C'est une *différence matérielle*, pas logicielle : OPA reste 10× plus rapide même après optimisation.
 
-3. **Recommandations pratiques** :
+3. *Recommandations pratiques* :
    
-   - **Pour les applications échangeant beaucoup de petits messages** (e.g., contrôle distribué, requêtes RPC courtes) : les optimisations RMI sont **essentielles** (+100% de débit possible).
+   - *Pour les applications échangeant beaucoup de petits messages* (e.g., contrôle distribué, requêtes RPC courtes) : les optimisations RMI sont *essentielles* (+100% de débit possible).
    
-   - **Pour les applications de transfert de gros volumes** (e.g., traitement de données massives, streaming) : le choix du réseau physique prime absolument. Privilégiez OPA si disponible (gain ×10 vs Ethernet).
+   - *Pour les applications de transfert de gros volumes* (e.g., traitement de données massives, streaming) : le choix du réseau physique prime absolument. Privilégiez OPA si disponible (gain ×10 vs Ethernet).
    
-   - **En résumé** : 
+   - *En résumé* : 
      - Petits messages → RMI optimizations matter
      - Gros messages → Network hardware matters
