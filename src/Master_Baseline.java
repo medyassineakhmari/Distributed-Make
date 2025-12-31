@@ -112,14 +112,13 @@ public class Master_Baseline {
                     Arrays.sort(latencies);
                     Arrays.sort(throughputs);
                     
-                    // Indices pour 30 valeurs : Q1=7.5, Median=14.5, Q3=22.5
-                    // For 30 values, median is average of elements at indices 14 and 15
+                    // Indices pour 30 valeurs : Q1=7, Median=15, Q3=22
                     double p25Latency = latencies[7];
-                    double medianLatency = (latencies[14] + latencies[15]) / 2.0;
+                    double medianLatency = latencies[15];
                     double p75Latency = latencies[22];
                     
                     double p25Throughput = throughputs[7];
-                    double medianThroughput = (throughputs[14] + throughputs[15]) / 2.0;
+                    double medianThroughput = throughputs[15];
                     double p75Throughput = throughputs[22];
                     
                     System.out.printf("  => Median Lat: %.3f ms | Median Thr: %.2f MB/s (IQR: %.2f - %.2f)\n", 
