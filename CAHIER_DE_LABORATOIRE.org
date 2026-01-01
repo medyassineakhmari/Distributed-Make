@@ -598,3 +598,83 @@ SCP reste limité par l'overhead de chiffrement SSH et le transfert réseau, mê
 ** Conclusion
 
 L'absence de handshake pour chaque opération en NFS, contrairement à SCP où chaque transfert nécessite une nouvelle session SSH établie, explique la supériorité systématique de NFS sur l'ensemble des cas de test.
+
+* Architecture et Logique du Makefile Parallèle
+-> COMMIT: 8beecca35f7c3df8b1ed051756c06c80dc93d5cb -> DATE: January 1, 2026 at 11:25 PM
+
+** Contexte général
+
+Le Makefile constitue l'élément central de notre projet. Il orchestre l'ensemble du workflow de traitement parallèle en définissant :
+- les *dépendances* entre tâches
+- l'*ordre d'exécution* optimal
+- les *règles de compilation* et de traitement
+
+La structure du Makefile repose sur un graphe de dépendances acyclique (DAG) qui permet à GNU Make de paralléliser les tâches indépendantes.
+
+** Graphe de dépendances
+
+ Le graphe de dépendances est le suivant :
+
+#+CAPTION: Graphe de dépendances du Makefile parallèle : flux du traitement des partitions en parallèle et agrégation finale.
+[[file:Makefile/Graphe_de_dépendance.png]]
+
+Structure conceptuelle du DAG (Directed Acyclic Graph) :
+
+** Logique détaillée du Makefile
+
+*** Étape 1 : Compilation du programme
+
+wordcount: test/wordcount.c
+    gcc -o wordcount test/wordcount.c
+
+
+- *Cible* : wordcount (l'exécutable)
+- *Dépendance* : test/wordcount.c (le source)
+- *Action* : compilation avec gcc
+
+Cette étape doit s'exécuter *une seule fois* au démarrage. 
+
+*** Étape 2 : Traitement parallèle des N partitions
+
+Pour un ensemble de N partitions, le Makefile génère N règles identiques :
+
+#+BEGIN_SRC makefile
+count1.txt: part1.txt wordcount
+    ./wordcount part1.txt > count1.txt
+
+count2.txt: part2.txt wordcount
+    ./wordcount part2.txt > count2.txt
+
+...
+
+countN.txt: partN.txt wordcount
+    ./wordcount partN.txt > countN.txt
+#+END_SRC
+
+- *Cibles* : count1.txt, count2.txt, ..., countN.txt
+- *Dépendances* : chaque partition d'entrée (part1.txt, part2.txt, ..., partN.txt) + l'exécutable wordcount
+- *Action* : exécute wordcount sur chaque partition
+
+
+*** Étape 3 : Agrégation des résultats
+
+#+BEGIN_SRC makefile
+total.txt: count1.txt count2.txt ... countN.txt
+    cat count1.txt count2.txt ... countN.txt | \
+    awk '{sum += $1} END {print sum}' > total.txt
+#+END_SRC
+
+- *Cible* : total.txt (résultat final)
+- *Dépendances* : les N fichiers de comptage (count1.txt, count2.txt, ..., countN.txt)
+- *Action* : concatène les résultats et somme les valeurs avec awk
+
+Cette étape *attend* que toutes les N partitions soient traitées, puis agrège les résultats. Elle représente la synchronisation finale du pipeline.
+
+** Workflow complet et planification des tâches
+
+1. *Vérification et compilation* : wordcount est compilé si nécessaire sur le nœud maître de Grid5000
+2. *Distribution et parallélisation* : 
+   - Les N partitions sont distribuées et traitées *en parallèle* sur les nœuds réservés
+   - Chaque instance de wordcount s'exécute sur un **nœud Grid5000 différent**, traitant une partition assignée
+3. *Synchronisation* : une fois tous les count1.txt, count2.txt, ..., countN.txt disponibles, l'agrégation commence
+4. *Résultat final* : total.txt contient le nombre total de mots obtenu en additionnant les comptages partiels (count1.txt, count2.txt, ..., countN.txt) générés par chaque nœud
