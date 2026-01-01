@@ -530,3 +530,71 @@ La différence reste prononcée : *OPA reste 10x plus rapide qu'Ethernet* même 
    - *En résumé* : 
      - Petits messages → RMI optimizations matter
      - Gros messages → Network hardware matters
+
+* Comparaison NFS vs SCP : latence et débit
+  -> COMMIT: 54ed6123ead76a2d1436e1da10d1de8ef3cae6db  -> DATE: January 1, 2026 at 1:46 PM
+
+** Contexte 
+
+La gestion des fichiers est un élément critique des systèmes distribués. Nous avons comparé deux approches : 
+- *NFS* (Network File System) : système de fichiers réseau transparent
+- *SCP* (Secure Copy Protocol) : transfert de fichiers basé sur SSH
+
+L'objectif est d'identifier le protocole le plus efficace pour différentes tailles de fichiers.
+
+** Latence
+
+NFS démontre une *supériorité nette* : latence inférieure à 5 ms pour tous les fichiers testés, indépendamment de leur taille.
+
+SCP, en revanche, souffre du *surcoût du handshake SSH* :
+- Identification du serveur
+- Authentification des credentials
+- Ouverture du canal de transfert
+
+Pour les *petits fichiers* (0-1 KB), ce handshake représente une fraction massive du temps total, résultant en une latence initiale jusqu'à ~380 ms qui diminue progressivement pour se stabiliser autour de ~230 ms.
+
+** Petits fichiers (0-1 KB)
+
+*** Latence
+
+#+CAPTION: Latence pour les petits fichiers : NFS conserve une latence faible et stable, tandis que SCP subit une latence plus élevée et variable à cause du handshake SSH.
+[[file:Makefile/NfsvsScp/small_files/small_01_latency_grouped.png]]
+
+*** Débit
+
+- *NFS* : débit constant et mesurable dès les petites tailles
+- *SCP* : débit quasi-nul en raison du ratio handshake/taille dominé par l'overhead SSH
+
+La formule explique ce phénomène :
+$Débit = Taille fichier / (T_{Overhead SSH} + T_{transfert})$
+
+
+#+CAPTION: Débit pour les petits fichiers : NFS surpasse significativement SCP dès les petites tailles.
+[[file:Makefile/NfsvsScp/small_files/small_02_throughput_grouped.png]]
+
+** Grands fichiers 
+
+*** Latence
+
+NFS maintient une latence inférieure à 5 ms indépendante de la taille du fichier.
+
+#+CAPTION: Latence pour les grands fichiers : NFS conserve une latence minimale même pour les transferts volumineux.
+[[file:Makefile/NfsvsScp/big_files/01_latency_grouped.png]]
+
+*** Débit
+
+NFS maintient son avantage même pour les transferts volumineux : débit très élevé.
+
+SCP reste limité par l'overhead de chiffrement SSH et le transfert réseau, même pour les gros fichiers.
+
+#+CAPTION: Débit pour les grands fichiers : NFS conserve un débit supérieur à SCP, même pour les transferts volumineux.
+[[file:Makefile/NfsvsScp/big_files/02_throughput_grouped.png]]
+
+** Recommandations
+
+- *Petits fichiers* : *NFS est indispensable*. NFS est plus performant que SCP.
+- *Grands fichiers* : NFS reste préférable. Pour un système distribué haute performance, utiliser NFS comme système de fichiers partagé principal, et SCP uniquement pour des transferts sécurisés ponctuels ou en solution de secours.
+
+** Conclusion
+
+L'absence de handshake pour chaque opération en NFS, contrairement à SCP où chaque transfert nécessite une nouvelle session SSH établie, explique la supériorité systématique de NFS sur l'ensemble des cas de test.
