@@ -6,8 +6,20 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Utility class to split large files equitably among workers.
+ * Ensures fair load distribution based on line count.
+ */
 public class FileSplitter {
 
+    /**
+     * Splits a file into N parts with equitable line distribution.
+     * @param inputFile Path to the input file
+     * @param numWorkers Number of workers (parts to create)
+     * @param outputPrefix Prefix for output files (e.g., "part")
+     * @return List of generated file paths
+     * @throws IOException if file operations fail
+     */
     public static List<String> splitFileEquitably(String inputFile, int numWorkers, String outputPrefix)
             throws IOException {
 
@@ -19,9 +31,11 @@ public class FileSplitter {
             throw new IllegalArgumentException("Number of workers must be at least 1");
         }
 
+        // Count total lines
         long totalLines = Files.lines(Paths.get(inputFile)).count();
         System.out.println("[SPLITTER] Total lines in input: " + totalLines);
 
+        // Calculate lines per worker (with remainder distribution)
         long linesPerWorker = totalLines / numWorkers;
         long remainder = totalLines % numWorkers;
 
@@ -32,6 +46,7 @@ public class FileSplitter {
 
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFile))) {
             for (int workerId = 0; workerId < numWorkers; workerId++) {
+                // First 'remainder' workers get one extra line
                 long linesToWrite = linesPerWorker + (workerId < remainder ? 1 : 0);
 
                 String outputFile = outputPrefix + (workerId + 1) + ".txt";
@@ -55,6 +70,15 @@ public class FileSplitter {
         return outputFiles;
     }
 
+    /**
+     * Splits a file by approximate size (in bytes) rather than lines.
+     * Useful for files with very uneven line lengths.
+     * @param inputFile Path to the input file
+     * @param numWorkers Number of workers
+     * @param outputPrefix Prefix for output files
+     * @return List of generated file paths
+     * @throws IOException if file operations fail
+     */
     public static List<String> splitFileBySize(String inputFile, int numWorkers, String outputPrefix)
             throws IOException {
 
@@ -81,8 +105,9 @@ public class FileSplitter {
                     while ((line = reader.readLine()) != null) {
                         writer.write(line);
                         writer.newLine();
-                        bytesWritten += line.length() + 1; 
+                        bytesWritten += line.length() + 1; // +1 for newline
 
+                        // Move to next file after reaching target (except last worker gets remainder)
                         if (workerId < numWorkers - 1 && bytesWritten >= bytesPerWorker) {
                             break;
                         }
@@ -96,6 +121,10 @@ public class FileSplitter {
         return outputFiles;
     }
 
+    /**
+     * Cleans up generated split files.
+     * @param files List of file paths to delete
+     */
     public static void cleanupFiles(List<String> files) {
         if (files == null) return;
 
@@ -109,9 +138,14 @@ public class FileSplitter {
         }
     }
 
+    /**
+     * Main method for command-line usage.
+     * Usage: java utils.FileSplitter <inputFile> <numWorkers> <outputPrefix>
+     */
     public static void main(String[] args) {
         if (args.length < 3) {
             System.err.println("Usage: java utils.FileSplitter <inputFile> <numWorkers> <outputPrefix>");
+            System.err.println("Example: java utils.FileSplitter data.txt 4 part");
             System.exit(1);
         }
 

@@ -1,0 +1,13 @@
+# Campagne lancée le 2026-01-02 06:27:45.271719
+# Cluster: nova
+# Configurations: [2, 3, 4, 6, 8, 10, 12, 15, 18]
+
+2 nodes: 1954998
+3 nodes: 1954999
+4 nodes: 1955000
+6 nodes: 1955001
+8 nodes: 1955002
+10 nodes: 1955003
+12 nodes: 1955004
+15 nodes: 1955005
+18 nodes: 1955006

@@ -12,11 +12,11 @@ Le temps d'initialisation du cluster dans votre projet inclut **plusieurs étape
 
 ```
 Total Initialization Time
-├─ A) ClusterManager parsing (listing nodes)
-├─ B) RMI registry creation on workers (10ms × N workers)
-├─ C) Worker registration with master (RMI handshake)
-├─ D) File compilation (if not done)
-└─ E) SSH key exchange (first connection only)
+├ A) ClusterManager parsing (listing nodes)
+├ B) RMI registry creation on workers (10ms × N workers)
+├ C) Worker registration with master (RMI handshake)
+├ D) File compilation (if not done)
+└ E) SSH key exchange (first connection only)
 ```
 
 ### ** Ce QU'ON NE PEUT PAS Mesurer**
@@ -188,7 +188,7 @@ T_init = 1 + 200 + 60 + 200 = 461 ms ≈ 0.5s
 
 ---
 
-## 📊 Tableau: Temps Mesurables vs Non-Mesurables
+##  Tableau: Temps Mesurables vs Non-Mesurables
 
 | Component | Mesurable? | Valeur Typique | Comment Mesurer |
 |-----------|-----------|-----------------|-----------------|

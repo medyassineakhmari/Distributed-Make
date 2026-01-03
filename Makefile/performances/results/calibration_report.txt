@@ -1,0 +1,45 @@
+╔══════════════════════════════════════════════════════════════════╗
+║            RAPPORT DE CALIBRATION DU MODÈLE                      ║
+╚══════════════════════════════════════════════════════════════════╝
+
+═══ 1. PARAMÈTRES CALIBRÉS ═══
+
+T_init(n) = α × n + β
+  α = 0.10 ± 0.03 ms/worker
+  β = 23.04 ± 0.37 ms
+  R² = 0.5971
+
+T_split(S) = S / BW_write
+  S = 1700 MB
+  BW_write = 92.87 MB/s
+  T_split = 18304.25 ± 129.51 ms
+
+T_calc(n, S) = S / min(n × V_cpu, BW_nfs)
+  V_cpu = 52.07 ± 2.08 MB/s
+  BW_nfs = 563.97 ± 90.72 MB/s
+  n_sat = 10.83 workers
+  R² = 0.9770
+
+═══ 2. VALIDATION MODÈLE ═══
+
+n      T_exp(s)     T_theo(s)    Erreur(%)   
+──────────────────────────────────────────────────
+2      35.72        34.65        2.98        
+3      27.89        29.21        4.73        
+6      23.14        23.77        2.71        
+8      22.53        22.41        0.54        
+10     21.72        21.59        0.56        
+12     21.32        21.34        0.10        
+15     21.37        21.34        0.12        
+18     21.48        21.34        0.64        
+──────────────────────────────────────────────────
+Erreur moyenne: 1.55%
+Erreur max: 4.73%
+
+═══ 3. INTERPRÉTATION ═══
+
+✓ EXCELLENT: Modèle très précis (erreur < 5%)
+
+Point de saturation NFS:
+  - Au-delà de 11 workers, T_calc ne diminue plus
+  - Bande passante NFS devient le goulot d'étranglement

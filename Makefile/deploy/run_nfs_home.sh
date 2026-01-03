@@ -1,9 +1,9 @@
 #!/bin/bash
 
 set -e
+PROJECT_DIR="$HOME/Distributed-Make/Makefile"
 
 NFS_SHARED_DIR="$HOME/nfs_wordcount"
-PROJECT_DIR="$HOME/wordcount-distributed"
 PORT=3000
 
 GREEN='\033[0;32m'
@@ -100,7 +100,7 @@ EOF
     INPUT_FILE="test_input.txt"
 else
     INPUT_FILE=$(basename "$1")
-    ln -sf "$(realpath $1)" $NFS_SHARED_DIR/$INPUT_FILE
+    ln -sf "$(realpath $1)" $NFS_SHARED_DIR/$INPUT_FILE || true
     echo -e "${GREEN}Input file linked to NFS (no copy): $INPUT_FILE${NC}"
 fi
 

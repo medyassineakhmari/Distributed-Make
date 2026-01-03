@@ -1,0 +1,2 @@
+#!/bin/bash
+sed -i '/echo "$NODE_COUNT,$iter,$METRICS_LINE"/c\    T_INIT=$(echo "$METRICS_LINE" | cut -d"," -f2)\n    T_SPLIT=$(echo "$METRICS_LINE" | cut -d"," -f3)\n    T_CALC=$(echo "$METRICS_LINE" | cut -d"," -f4)\n    T_MERGE=$(echo "$METRICS_LINE" | cut -d"," -f5)\n    T_TOTAL=$(echo "$METRICS_LINE" | cut -d"," -f6)\n    echo "$NODE_COUNT,$iter,$T_INIT,$T_SPLIT,$T_CALC,$T_MERGE,$T_TOTAL" >> "$CSV_OUTPUT"' ~/Distributed-Make/Makefile/performances/scripts/benchmark_model.sh

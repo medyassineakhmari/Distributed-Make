@@ -149,6 +149,9 @@ public class MainNFS {
 
             TimingManager.printReport();
 
+            // Export metrics to CSV for performance analysis
+            TimingManager.exportMetrics(numWorkers);
+
             File resultFile = new File(nfsPath + "/total.txt");
             if (resultFile.exists()) {
                 try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(resultFile))) {

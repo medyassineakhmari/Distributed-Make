@@ -1,3 +1,11 @@
-pingpong.tar.gz
-notes
-.venv
+OAR.*
+*.stderr
+*.stdout
+*.log
+*.class
+target/
+bin/
+__pycache__/
+Makefile/performances/data/*.csv
+!Makefile/final_data.csv
+!Makefile/performances/results/graphs/*.png
