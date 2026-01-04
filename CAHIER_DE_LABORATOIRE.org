@@ -678,3 +678,41 @@ Cette étape *attend* que toutes les N partitions soient traitées, puis agrège
    - Chaque instance de wordcount s'exécute sur un **nœud Grid5000 différent**, traitant une partition assignée
 3. *Synchronisation* : une fois tous les count1.txt, count2.txt, ..., countN.txt disponibles, l'agrégation commence
 4. *Résultat final* : total.txt contient le nombre total de mots obtenu en additionnant les comptages partiels (count1.txt, count2.txt, ..., countN.txt) générés par chaque nœud
+
+* Performances et Calibration du Modèle
+      -> COMMIT: 50049e7fe0726abed4d000b0acdb1035e6f4f560 -> DATE: January 3, 2026 at 4:00 AM
+
+** Contexte général
+
+Cette section documente l'analyse expérimentale des performances du système distribué en fonction du nombre de workers et de la taille des données. Une campagne de mesures a été menée pour calibrer un modèle théorique capable de prédire le temps d'exécution global du makefile parallèle.
+
+** Protocole expérimental
+
+*** Configuration de test
+
+- *Taille de données* : S = 1700 MB
+- *Nombre d'itérations* : 10 itérations par configuration
+- *Configurations testées* : n = 2, 3, 6, 8, 10, 12, 15, 18 workers
+- *Infrastructure* : Grid5000 (NFS pour le partage de fichiers)
+
+*** Phases mesurées
+
+Pour chaque exécution du makefile parallèle, quatre phases sont instrumentées :
+
+1. *t_init* : initialisation et communication (ms)
+2. *t_split* : découpage du fichier en partitions (ms)
+3. *t_calc* : calcul parallèle (traitement des partitions) (ms)
+4. *t_merge* : agrégation des résultats (ms)
+
+
+*Observation clé* : Au-delà de 11 workers, t_calc stagne autour de 3500-3600 ms, indiquant un point de saturation.
+
+
+*** Graphiques de validation
+
+#+CAPTION: Temps total expérimental vs. théorique : le modèle calibré prédit précisément le comportement du système pour 2 à 18 workers.
+[[file:Makefile/performances/results/graphs/fig1_model_validation.png]]
+#+CAPTION: Speedup && efficiency
+[[file:Makefile/performances/results/graphs/fig2_speedup_efficiency.png]]
+
+
